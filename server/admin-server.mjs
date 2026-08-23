@@ -9,6 +9,8 @@ import http from "node:http";
 import fs from "node:fs";
 import path from "node:path";
 import { createHmac, randomBytes, createHash, timingSafeEqual } from "node:crypto";
+import { NEWS_FEEDS, parseRssItems } from "./news-feed.mjs";
+import { startTelegramBot } from "./telegram-bot.mjs";
 
 const PORT = parseInt(process.env.PORT || "3000", 10);
 const DATA_DIR = process.env.DATA_DIR || path.resolve("data");
@@ -114,54 +116,9 @@ const DEFAULTS = {
 };
 
 /* ---------- Лента новостей: собственный прокси (без сторонних CORS-сервисов) ---------- */
-const NEWS_FEEDS = {
-  ru: "https://news.google.com/rss/search?q=Doomsday%20Last%20Survivors&hl=ru&gl=RU&ceid=RU:ru",
-  en: "https://news.google.com/rss/search?q=Doomsday%20Last%20Survivors&hl=en-US&gl=US&ceid=US:en",
-  es: "https://news.google.com/rss/search?q=Doomsday%20Last%20Survivors&hl=es&gl=ES&ceid=ES:es",
-  de: "https://news.google.com/rss/search?q=Doomsday%20Last%20Survivors&hl=de&gl=DE&ceid=DE:de",
-  fr: "https://news.google.com/rss/search?q=Doomsday%20Last%20Survivors&hl=fr&gl=FR&ceid=FR:fr",
-  pt: "https://news.google.com/rss/search?q=Doomsday%20Last%20Survivors&hl=pt-BR&gl=BR&ceid=BR:pt-419",
-  zh: "https://news.google.com/rss/search?q=Doomsday%20Last%20Survivors&hl=zh-CN&gl=CN&ceid=CN:zh-Hans",
-  ar: "https://news.google.com/rss/search?q=Doomsday%20Last%20Survivors&hl=ar&gl=EG&ceid=EG:ar",
-};
-
-const NEWS_CACHE_TTL = 15 * 60 * 1000; // 15 минут
-const newsCache = new Map(); // lang -> { ts, items }
-
-function decodeEntities(s) {
-  return String(s)
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/<!\[CDATA\[|\]\]>/g, "");
-}
-
-function parseRssItems(xml) {
-  const items = [];
-  const re = /<item>([\s\S]*?)<\/item>/g;
-  let m;
-  while ((m = re.exec(xml)) && items.length < 5) {
-    const block = m[1];
-    const rawTitle = (block.match(/<title>([\s\S]*?)<\/title>/) || [])[1] || "";
-    const link = (block.match(/<link>([\s\S]*?)<\/link>/) || [])[1] || "";
-    const pub = (block.match(/<pubDate>([\s\S]*?)<\/pubDate>/) || [])[1] || "";
-    let title = decodeEntities(rawTitle).trim();
-    if (!title) continue;
-    const srcMatch = title.match(/\s+-\s+([^-]+)$/);
-    const source = srcMatch ? srcMatch[1].trim() : "Google News";
-    if (srcMatch) title = title.slice(0, srcMatch.index).trim();
-    items.push({
-      title: title || "Doomsday: Last Survivors",
-      date: pub ? new Date(pub).toISOString() : null,
-      url: link.trim() || "https://dls.igg.com/",
-      source,
-    });
-  }
-  return items;
-}
-
+/* ---------- Лента новостей: собственный прокси (без сторонних CORS-сервисов) ---------- */
+const NEWS_CACHE_TTL = 15 * 60 * 1000;
+const newsCache = new Map();
 /* ---------- Хранилище ---------- */
 const CONTENT_FILE = path.join(DATA_DIR, "content.json");
 const SECRET_FILE = path.join(DATA_DIR, "secret.key");
@@ -193,6 +150,13 @@ function saveContent(content) {
   fs.writeFileSync(tmp, JSON.stringify(content, null, 2));
   fs.renameSync(tmp, CONTENT_FILE);
 }
+
+/* ---------- Telegram-бот (автопостинг в канал) ---------- */
+const telegramBot = startTelegramBot({
+  token: process.env.BOT_TOKEN || "",
+  channel: process.env.TELEGRAM_CHANNEL || "@lastbotdls",
+  dataDir: DATA_DIR,
+});
 
 const secret = fs.readFileSync(SECRET_FILE, "utf8").trim();
 
@@ -414,6 +378,14 @@ const server = http.createServer(async (req, res) => {
       if (!isAuthed(req)) { json(res, 401, { ok: false, error: "Требуется вход" }); return; }
       saveContent(DEFAULTS);
       json(res, 200, { ok: true });
+      return;
+    }
+
+    if (p === "/api/telegram/post-news" && req.method === "POST") {
+      if (!originOk(req)) { json(res, 403, { ok: false, error: "bad origin" }); return; }
+      if (!isAuthed(req)) { json(res, 401, { ok: false, error: "Требуется вход" }); return; }
+      const result = await telegramBot.postNewNews();
+      json(res, 200, { ok: true, ...result });
       return;
     }
 

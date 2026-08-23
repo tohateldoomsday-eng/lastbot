@@ -523,6 +523,25 @@
     }
   });
 
+  /* Публикация новостей в Telegram-канал */
+  const tgPostBtn = $("#tgPostBtn");
+  if (tgPostBtn) {
+    tgPostBtn.addEventListener("click", async () => {
+      tgPostBtn.disabled = true;
+      tgPostBtn.textContent = "→ TG: отправка…";
+      const res = await api("/api/telegram/post-news", { method: "POST" });
+      tgPostBtn.disabled = false;
+      tgPostBtn.textContent = "→ TG: новости";
+      if (res.status === 200 && res.data && res.data.ok) {
+        toast("Опубликовано в Telegram: " + (res.data.posted || 0) + " новостей", "ok");
+      } else if (res.status === 401) {
+        toast("Сессия истекла — войдите снова", "err");
+      } else {
+        toast("Telegram: " + ((res.data && res.data.error) || "ошибка публикации"), "err");
+      }
+    });
+  }
+
   $("#resetBtn").addEventListener("click", async () => {
     if (!confirm("Вернуть весь контент к значениям по умолчанию?")) return;
     const res = await api("/api/content/reset", { method: "POST" });

@@ -15,6 +15,9 @@ services:
     environment:
       ADMIN_USER: ${ADMIN_USER:-ta-admin}
       ADMIN_PASS: ${ADMIN_PASS:?ADMIN_PASS is required - create .env from .env.example}
+      # Telegram-бот: автопостинг новостей в канал
+      BOT_TOKEN: ${BOT_TOKEN:-}
+      TELEGRAM_CHANNEL: ${TELEGRAM_CHANNEL:-@lastbotdls}
 
     # Для разработки без пересборки образа раскомментируйте:
     # - ./public:/usr/share/nginx/html:ro
