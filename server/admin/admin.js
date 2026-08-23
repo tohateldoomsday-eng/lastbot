@@ -139,6 +139,12 @@
         { path: "contacts.tagline", label: "Слоган в подвале", type: "textarea" },
       ],
     },
+    {
+      id: "menu", label: "Меню", desc: "Ссылки в верхнем меню сайта",
+      fields: [
+        { path: "dashboard.url", label: "Ссылка кнопки «Дашборд» (пусто — кнопка скрыта)", type: "text", saveEmpty: true },
+      ],
+    },
   ];
 
   /* ---------- Работа с путями ---------- */
@@ -326,6 +332,7 @@
       const editor = objectsEditor(field.path, Array.isArray(value) ? value : [], field.spec || []);
       wrap.append(editor);
     }
+    if (field.saveEmpty) wrap.dataset.saveEmpty = "1";
     return wrap;
   }
 
@@ -474,7 +481,7 @@
       const kids = Array.from(field.children);
       const input = kids.find((el) => el.matches("input[data-path], textarea[data-path]"));
       if (input) {
-        if (input.value !== "") setPath(content, input.dataset.path, input.value);
+        if (input.value !== "" || field.dataset.saveEmpty) setPath(content, input.dataset.path, input.value);
         return;
       }
       const list = kids.find((el) => el.classList.contains("list-editor"));

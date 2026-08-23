@@ -52,9 +52,13 @@
     if (lang === "ru") {
       loadContent().then((c) => {
         if (currentLang === "ru") applyContent(c);
+        else if (c) applyDashboard(c);
       });
     } else if (dict) {
       applyContent(dict);
+      loadContent().then((c) => {
+        if (c) applyDashboard(c);
+      });
     }
     if (!isInit || lang !== "ru") {
       if (typeof loadNews === "function") loadNews();
@@ -268,6 +272,15 @@
     }
   }
 
+  /* Кнопка «Дашборд» в меню: ссылка задаётся в админ-панели */
+  function applyDashboard(c) {
+    const dash = document.getElementById("dashboardLink");
+    if (!dash) return;
+    const url = (c.dashboard && c.dashboard.url) || "";
+    dash.hidden = !url;
+    if (url) dash.href = url;
+  }
+
   function applyContent(c) {
     if (!c) return;
 
@@ -403,6 +416,9 @@
         setTextIn(el, "p", s.text);
       });
     }
+
+    /* Кнопка «Дашборд» в меню */
+    applyDashboard(c);
 
     /* Новости и промокоды — подмена базовых списков */
     if (Array.isArray(c.news && c.news.items) && c.news.items.length) {

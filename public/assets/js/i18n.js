@@ -94,7 +94,7 @@ ru: {
     tagline: "Облачная автоматизация Doomsday: Last Survivors. Лечи. Фарми. Доминируй.",
   },
   ui: {
-    navFeatures: "Функции", navWhy: "Почему мы", navPricing: "Тарифы", navNews: "Новости", navFaq: "FAQ",
+    navFeatures: "Функции", navWhy: "Почему мы", navPricing: "Тарифы", navNews: "Новости", navFaq: "FAQ", navDashboard: "Дашборд",
     headerCta: "Выбрать тариф",
     heroCta: "Начать использовать", heroHow: "Как это работает",
     statUptime: "Аптайм", statBots: "Ботов на сервере", statSavings: "Экономия в неделю", statSupport: "Поддержка", statHours: "ч",
@@ -207,7 +207,7 @@ en: {
     tagline: "Cloud automation for Doomsday: Last Survivors. Heal. Farm. Dominate.",
   },
   ui: {
-    navFeatures: "Features", navWhy: "Why us", navPricing: "Pricing", navNews: "News", navFaq: "FAQ",
+    navFeatures: "Features", navWhy: "Why us", navPricing: "Pricing", navNews: "News", navFaq: "FAQ", navDashboard: "Dashboard",
     headerCta: "Choose a plan",
     heroCta: "Get started", heroHow: "How it works",
     statUptime: "Uptime", statBots: "Bots on server", statSavings: "Saved per week", statSupport: "Support", statHours: "h",
@@ -320,7 +320,7 @@ es: {
     tagline: "Automatización en la nube para Doomsday: Last Survivors. Cura. Farmea. Domina.",
   },
   ui: {
-    navFeatures: "Funciones", navWhy: "Por qué nosotros", navPricing: "Precios", navNews: "Noticias", navFaq: "FAQ",
+    navFeatures: "Funciones", navWhy: "Por qué nosotros", navPricing: "Precios", navNews: "Noticias", navFaq: "FAQ", navDashboard: "Panel",
     headerCta: "Elegir plan",
     heroCta: "Empezar", heroHow: "Cómo funciona",
     statUptime: "Tiempo activo", statBots: "Bots en servidor", statSavings: "Ahorro semanal", statSupport: "Soporte", statHours: "h",
@@ -433,7 +433,7 @@ de: {
     tagline: "Cloud-Automatisierung für Doomsday: Last Survivors. Heile. Farme. Dominiere.",
   },
   ui: {
-    navFeatures: "Funktionen", navWhy: "Warum wir", navPricing: "Preise", navNews: "News", navFaq: "FAQ",
+    navFeatures: "Funktionen", navWhy: "Warum wir", navPricing: "Preise", navNews: "News", navFaq: "FAQ", navDashboard: "Dashboard",
     headerCta: "Tarif wählen",
     heroCta: "Loslegen", heroHow: "So funktioniert es",
     statUptime: "Uptime", statBots: "Bots auf dem Server", statSavings: "Ersparnis pro Woche", statSupport: "Support", statHours: "Std.",
@@ -546,7 +546,7 @@ fr: {
     tagline: "Automatisation cloud pour Doomsday: Last Survivors. Soigne. Farme. Domine.",
   },
   ui: {
-    navFeatures: "Fonctions", navWhy: "Pourquoi nous", navPricing: "Tarifs", navNews: "Actus", navFaq: "FAQ",
+    navFeatures: "Fonctions", navWhy: "Pourquoi nous", navPricing: "Tarifs", navNews: "Actus", navFaq: "FAQ", navDashboard: "Tableau de bord",
     headerCta: "Choisir un forfait",
     heroCta: "Commencer", heroHow: "Comment ça marche",
     statUptime: "Disponibilité", statBots: "Bots sur le serveur", statSavings: "Économie par semaine", statSupport: "Support", statHours: "h",
@@ -659,7 +659,7 @@ pt: {
     tagline: "Automação em nuvem para Doomsday: Last Survivors. Cure. Farme. Domine.",
   },
   ui: {
-    navFeatures: "Funções", navWhy: "Por que nós", navPricing: "Preços", navNews: "Notícias", navFaq: "FAQ",
+    navFeatures: "Funções", navWhy: "Por que nós", navPricing: "Preços", navNews: "Notícias", navFaq: "FAQ", navDashboard: "Painel",
     headerCta: "Escolher plano",
     heroCta: "Começar", heroHow: "Como funciona",
     statUptime: "Uptime", statBots: "Bots no servidor", statSavings: "Economia por semana", statSupport: "Suporte", statHours: "h",
@@ -772,7 +772,7 @@ zh: {
     tagline: "Doomsday: Last Survivors 云端自动化。治疗。刷资源。统治。",
   },
   ui: {
-    navFeatures: "功能", navWhy: "为什么选我们", navPricing: "价格", navNews: "新闻", navFaq: "常见问题",
+    navFeatures: "功能", navWhy: "为什么选我们", navPricing: "价格", navNews: "新闻", navFaq: "常见问题", navDashboard: "控制台",
     headerCta: "选择套餐",
     heroCta: "开始使用", heroHow: "如何运作",
     statUptime: "运行时间", statBots: "服务器上的机器人", statSavings: "每周节省", statSupport: "客服", statHours: "小时",
@@ -885,7 +885,7 @@ ar: {
     tagline: "أتمتة سحابية للعبة Doomsday: Last Survivors. عالج. اجمع. سيطر.",
   },
   ui: {
-    navFeatures: "الميزات", navWhy: "لماذا نحن", navPricing: "الأسعار", navNews: "الأخبار", navFaq: "الأسئلة الشائعة",
+    navFeatures: "الميزات", navWhy: "لماذا نحن", navPricing: "الأسعار", navNews: "الأخبار", navFaq: "الأسئلة الشائعة", navDashboard: "لوحة التحكم",
     headerCta: "اختر الباقة",
     heroCta: "ابدأ الآن", heroHow: "كيف يعمل",
     statUptime: "وقت التشغيل", statBots: "بوتات على الخادم", statSavings: "التوفير أسبوعياً", statSupport: "الدعم", statHours: "ساعة",
