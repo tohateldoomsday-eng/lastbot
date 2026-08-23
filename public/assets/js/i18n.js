@@ -89,8 +89,8 @@ ru: {
   },
   contacts: {
     email: "support@lastbot.gg",
-    telegramHandle: "@lastbot_support",
-    telegramUrl: "https://t.me/lastbot_support",
+    telegramHandle: "@lastbotdls",
+    telegramUrl: "https://t.me/lastbotdls",
     tagline: "Облачная автоматизация Doomsday: Last Survivors. Лечи. Фарми. Доминируй.",
   },
   ui: {
@@ -202,8 +202,8 @@ en: {
   },
   contacts: {
     email: "support@lastbot.gg",
-    telegramHandle: "@lastbot_support",
-    telegramUrl: "https://t.me/lastbot_support",
+    telegramHandle: "@lastbotdls",
+    telegramUrl: "https://t.me/lastbotdls",
     tagline: "Cloud automation for Doomsday: Last Survivors. Heal. Farm. Dominate.",
   },
   ui: {
@@ -315,8 +315,8 @@ es: {
   },
   contacts: {
     email: "support@lastbot.gg",
-    telegramHandle: "@lastbot_support",
-    telegramUrl: "https://t.me/lastbot_support",
+    telegramHandle: "@lastbotdls",
+    telegramUrl: "https://t.me/lastbotdls",
     tagline: "Automatización en la nube para Doomsday: Last Survivors. Cura. Farmea. Domina.",
   },
   ui: {
@@ -428,8 +428,8 @@ de: {
   },
   contacts: {
     email: "support@lastbot.gg",
-    telegramHandle: "@lastbot_support",
-    telegramUrl: "https://t.me/lastbot_support",
+    telegramHandle: "@lastbotdls",
+    telegramUrl: "https://t.me/lastbotdls",
     tagline: "Cloud-Automatisierung für Doomsday: Last Survivors. Heile. Farme. Dominiere.",
   },
   ui: {
@@ -541,8 +541,8 @@ fr: {
   },
   contacts: {
     email: "support@lastbot.gg",
-    telegramHandle: "@lastbot_support",
-    telegramUrl: "https://t.me/lastbot_support",
+    telegramHandle: "@lastbotdls",
+    telegramUrl: "https://t.me/lastbotdls",
     tagline: "Automatisation cloud pour Doomsday: Last Survivors. Soigne. Farme. Domine.",
   },
   ui: {
@@ -654,8 +654,8 @@ pt: {
   },
   contacts: {
     email: "support@lastbot.gg",
-    telegramHandle: "@lastbot_support",
-    telegramUrl: "https://t.me/lastbot_support",
+    telegramHandle: "@lastbotdls",
+    telegramUrl: "https://t.me/lastbotdls",
     tagline: "Automação em nuvem para Doomsday: Last Survivors. Cure. Farme. Domine.",
   },
   ui: {
@@ -767,8 +767,8 @@ zh: {
   },
   contacts: {
     email: "support@lastbot.gg",
-    telegramHandle: "@lastbot_support",
-    telegramUrl: "https://t.me/lastbot_support",
+    telegramHandle: "@lastbotdls",
+    telegramUrl: "https://t.me/lastbotdls",
     tagline: "Doomsday: Last Survivors 云端自动化。治疗。刷资源。统治。",
   },
   ui: {
@@ -880,8 +880,8 @@ ar: {
   },
   contacts: {
     email: "support@lastbot.gg",
-    telegramHandle: "@lastbot_support",
-    telegramUrl: "https://t.me/lastbot_support",
+    telegramHandle: "@lastbotdls",
+    telegramUrl: "https://t.me/lastbotdls",
     tagline: "أتمتة سحابية للعبة Doomsday: Last Survivors. عالج. اجمع. سيطر.",
   },
   ui: {

@@ -104,8 +104,8 @@ const DEFAULTS = {
   },
   contacts: {
     email: "support@lastbot.gg",
-    telegramHandle: "@lastbot_support",
-    telegramUrl: "https://t.me/lastbot_support",
+    telegramHandle: "@lastbotdls",
+    telegramUrl: "https://t.me/lastbotdls",
     tagline: "Облачная автоматизация Doomsday: Last Survivors. Лечи. Фарми. Доминируй.",
   },
   dashboard: {
