@@ -12,7 +12,7 @@ param(
 )
 
 Write-Host "==> Pushing code to origin/main..." -ForegroundColor Cyan
-git push origin main
+git push origin HEAD
 if ($LASTEXITCODE -ne 0) {
   Write-Host "git push failed. Commit your changes first." -ForegroundColor Red
   exit 1
