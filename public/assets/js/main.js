@@ -272,12 +272,11 @@
     }
   }
 
-  /* Кнопка «Дашборд» в меню: ссылка задаётся в админ-панели */
+  /* Кнопка «Дашборд» в меню: всегда видна, ссылку задаёт админ-панель */
   function applyDashboard(c) {
     const dash = document.getElementById("dashboardLink");
     if (!dash) return;
     const url = (c.dashboard && c.dashboard.url) || "";
-    dash.hidden = !url;
     if (url) dash.href = url;
   }
 

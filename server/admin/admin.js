@@ -142,7 +142,7 @@
     {
       id: "menu", label: "Меню", desc: "Ссылки в верхнем меню сайта",
       fields: [
-        { path: "dashboard.url", label: "Ссылка кнопки «Дашборд» (пусто — кнопка скрыта)", type: "text", saveEmpty: true },
+        { path: "dashboard.url", label: "Ссылка кнопки «Дашборд» (кнопка всегда в меню)", type: "text", saveEmpty: true },
       ],
     },
   ];
