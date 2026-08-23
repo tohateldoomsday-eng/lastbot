@@ -1,0 +1,7 @@
+# Скрипты и Dockerfile всегда с LF — иначе сломаются на Linux
+*.sh text eol=lf
+Dockerfile text eol=lf
+*.conf text eol=lf
+
+# Остальное — автоопределение
+* text=auto

@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LASTBOT — Панель управления</title>
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%2322d3ee'/%3E%3Cstop offset='1' stop-color='%238b5cf6'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M32 4l24 14v28L32 60 8 46V18z' fill='none' stroke='url(%23g)' stroke-width='4'/%3E%3Cpath d='M32 20a12 12 0 1 0 0 24 12 12 0 0 0 0-24zm0 7a5 5 0 1 1 0 10 5 5 0 0 1 0-10z' fill='url(%23g)'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/admin/admin.css?v=6">
+</head>
+<body>
+
+  <!-- Экран входа -->
+  <div id="loginView" class="login-wrap">
+    <form id="loginForm" class="login-card" autocomplete="on">
+      <div class="login-logo">LAST<span>BOT</span></div>
+      <h1>Панель управления</h1>
+      <p class="login-hint">Введите данные администратора</p>
+      <label class="fld">
+        <span>Логин</span>
+        <input id="loginUser" name="username" type="text" autocomplete="username" required>
+      </label>
+      <label class="fld">
+        <span>Пароль</span>
+        <input id="loginPass" name="password" type="password" autocomplete="current-password" required>
+      </label>
+      <p id="loginError" class="login-error" role="alert" hidden></p>
+      <p id="loginStatus" class="login-status">Загрузка панели…</p>
+      <button class="btn btn-primary btn-block" type="submit">Войти</button>
+    </form>
+  </div>
+
+  <!-- Рабочая панель -->
+  <div id="appView" class="app-wrap" hidden>
+    <header class="app-head">
+      <div class="app-logo">LAST<span>BOT</span> · Admin</div>
+      <div class="app-actions">
+        <a class="btn btn-ghost btn-sm" href="/" target="_blank" rel="noopener">Открыть сайт</a>
+        <button id="resetBtn" class="btn btn-ghost btn-sm" type="button">Сбросить контент</button>
+        <button id="saveBtn" class="btn btn-primary btn-sm" type="button">Сохранить</button>
+        <button id="logoutBtn" class="btn btn-ghost btn-sm" type="button">Выйти</button>
+      </div>
+    </header>
+
+    <div class="app-body">
+      <nav id="tabNav" class="app-tabs" aria-label="Разделы контента"></nav>
+      <main id="tabPanels" class="app-panels"></main>
+    </div>
+
+    <p id="saveStatus" class="save-status" aria-live="polite"></p>
+  </div>
+
+    <script>
+    // Строка статуса + резервный вход: панель всегда даёт видимый отклик,
+    // даже если основной скрипт admin.js не загрузился в браузере
+    (function () {
+      function status(text, ok) {
+        var s = document.getElementById("loginStatus");
+        if (!s) return;
+        s.textContent = text;
+        s.style.color = ok ? "#4ade80" : "#f87171";
+      }
+      window.addEventListener("load", function () {
+        if (window.__LB_ADMIN_READY__) {
+          status("Панель v6 загружена ✓ адрес: " + location.origin + " — введите данные и нажмите «Войти»", true);
+        } else {
+          status("Резервный режим: основной скрипт не загрузился, но вход всё равно сработает", false);
+        }
+      });
+      document.addEventListener("submit", function (e) {
+        var form = e.target;
+        if (!form || form.id !== "loginForm" || window.__LB_ADMIN_READY__) return;
+        e.preventDefault();
+        status("Отправляем запрос…", false);
+        fetch("/api/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "same-origin",
+          body: JSON.stringify({
+            u: document.getElementById("loginUser").value,
+            p: document.getElementById("loginPass").value,
+          }),
+        })
+          .then(function (r) { return r.json().then(function (j) { return { s: r.status, j: j }; }); })
+          .then(function (x) {
+            if (x.s === 200 && x.j && x.j.ok) { location.reload(); }
+            else { status((x.j && x.j.error) || ("Ошибка сервера: " + x.s), false); }
+          })
+          .catch(function (err) { status("Нет связи с сервером: " + err, false); });
+      }, true);
+    })();
+  </script>
+  <script src="/admin/admin.js?v=6" defer></script>
+</body>
+</html>

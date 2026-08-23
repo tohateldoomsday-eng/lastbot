@@ -1,0 +1,20 @@
+services:
+  web:
+    build: .
+    image: lastbot-web:latest
+    container_name: lastbot-web
+    ports:
+      - "8080:80"
+    restart: unless-stopped
+    volumes:
+      # контент админ-панели и секрет сессии сохраняются между перезапусками
+      - ./data:/app/data
+    # Логин/пароль админки берутся из файла .env (см. .env.example).
+    # Если ADMIN_PASS не задан — сборка останавливается с ошибкой:
+    # это осознанная защита, пароль по умолчанию скомпрометирован.
+    environment:
+      ADMIN_USER: ${ADMIN_USER:-ta-admin}
+      ADMIN_PASS: ${ADMIN_PASS:?ADMIN_PASS is required - create .env from .env.example}
+
+    # Для разработки без пересборки образа раскомментируйте:
+    # - ./public:/usr/share/nginx/html:ro
