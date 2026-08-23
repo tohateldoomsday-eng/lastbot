@@ -15,7 +15,7 @@ import { startTelegramBot } from "./telegram-bot.mjs";
 const PORT = parseInt(process.env.PORT || "3000", 10);
 const DATA_DIR = process.env.DATA_DIR || path.resolve("data");
 const ADMIN_USER = process.env.ADMIN_USER || "ta-admin";
-const ADMIN_PASS = process.env.ADMIN_PASS || "142536Mainkey";
+const ADMIN_PASS = process.env.ADMIN_PASS || ""; // без .env вход закрыт (см. проверку в /api/login)
 const ADMIN_DIR = path.resolve(path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1")), "admin");
 const TOKEN_TTL = 12 * 60 * 60 * 1000; // 12 часов
 const LOGIN_WINDOW = 10 * 60 * 1000;   // окно rate-limit: 10 минут
@@ -303,6 +303,7 @@ const server = http.createServer(async (req, res) => {
       if (!originOk(req)) { json(res, 403, { ok: false, error: "bad origin" }); return; }
       if (!rateLimitOk(ip)) { json(res, 429, { ok: false, error: "Слишком много попыток, подождите" }); return; }
       const body = JSON.parse((await readBody(req)) || "{}");
+      if (!ADMIN_PASS) { json(res, 503, { ok: false, error: "ADMIN_PASS не задан: создайте .env (см. .env.example)" }); return; }
       const userOk = safeEqual(body.u || "", ADMIN_USER);
       const passOk = safeEqual(body.p || "", ADMIN_PASS);
       if (!userOk || !passOk) { json(res, 401, { ok: false, error: "Неверный логин или пароль" }); return; }
