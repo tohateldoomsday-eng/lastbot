@@ -84,7 +84,8 @@ export function startTelegramBot({ token, channel, dataDir }) {
       chat_id: channel,
       text,
       parse_mode: "HTML",
-      disable_web_page_preview: true,
+      // превью включено: Telegram сам подтягивает картинку со страницы новости
+      link_preview_options: { is_disabled: false, prefer_large_media: true },
     });
     if (!res || !res.ok) {
       const desc = res && res.description ? res.description : "неизвестная ошибка";
@@ -103,7 +104,7 @@ export function startTelegramBot({ token, channel, dataDir }) {
         const text =
           "📰 <b>" + escapeHtml(item.title) + "</b>\n" +
           (item.source ? "Источник: " + escapeHtml(item.source) + "\n" : "") +
-          "🔗 " + item.url;
+          '<a href="' + escapeHtml(item.url) + '">Читать полностью →</a>';
         await postMessage(text);
         seen.add(id);
         posted++;
