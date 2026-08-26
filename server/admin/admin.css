@@ -295,3 +295,83 @@ textarea { min-height: 74px; resize: vertical; }
 }
 
 .login-status { margin: 0; font-size: 13px; color: var(--text-dim); min-height: 18px; }
+
+/* ============================================================
+   Новые разделы: акции, триалы, балансы, рефералы
+   ============================================================ */
+.extra-panel { display: flex; flex-direction: column; gap: 14px; }
+
+.data-table-wrap {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow-x: auto;
+  background: var(--panel);
+}
+.data-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.data-table th {
+  padding: 10px 12px;
+  text-align: left;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  border-bottom: 1px solid var(--border-strong);
+  white-space: nowrap;
+}
+.data-table td { padding: 9px 12px; color: var(--text-dim); border-bottom: 1px solid var(--border); vertical-align: middle; }
+.data-table tr:last-child td { border-bottom: 0; }
+.data-table td.mono, .mono { font-family: var(--font-mono); color: var(--cyan-soft); letter-spacing: .06em; }
+.data-table input {
+  width: 110px;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-1);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+}
+.data-empty { padding: 18px; margin: 0; font-size: 13.5px; color: var(--text-faint); }
+
+.promo-item select {
+  padding: 9px 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-1);
+  color: var(--text);
+  font: inherit;
+}
+
+.mini-form {
+  padding: 18px;
+  border: 1px dashed var(--border-strong);
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.mini-form h3 { margin: 0; font-size: 15px; font-family: var(--font-body); }
+.mini-form-row { display: flex; gap: 10px; flex-wrap: wrap; }
+.mini-form-row input {
+  flex: 1;
+  min-width: 200px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-1);
+  color: var(--text);
+  font: inherit;
+}
+.mini-form-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.mini-form-grid input {
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-1);
+  color: var(--text);
+  font: inherit;
+}
+@media (max-width: 860px) {
+  .mini-form-grid { grid-template-columns: 1fr; }
+}

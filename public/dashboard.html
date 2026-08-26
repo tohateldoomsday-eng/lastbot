@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Кабинет альянса — LASTBOT</title>
+  <meta name="description" content="Личный кабинет альянса LASTBOT: баланс бото-месяцев, кэшбэк, история покупок и рефералы.">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#05070f">
+  <script>
+    (function () {
+      try {
+        var t = localStorage.getItem("lb_theme");
+        if (t !== "light" && t !== "dark") t = (window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches) ? "light" : "dark";
+        document.documentElement.classList.toggle("light", t === "light");
+        document.documentElement.dataset.theme = t;
+      } catch (e) {}
+    })();
+  </script>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%2322d3ee'/%3E%3Cstop offset='1' stop-color='%238b5cf6'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M32 4l24 14v28L32 60 8 46V18z' fill='none' stroke='url(%23g)' stroke-width='4'/%3E%3Cpath d='M32 20a12 12 0 1 0 0 24 12 12 0 0 0 0-24zm0 7a5 5 0 1 1 0 10 5 5 0 0 1 0-10z' fill='url(%23g)'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/style.css?v=12">
+</head>
+<body class="dash-page">
+  <div class="bg-scene" aria-hidden="true">
+    <canvas id="particles" class="bg-particles"></canvas>
+    <div class="orb orb-a"></div>
+    <div class="orb orb-b"></div>
+    <div class="bg-grid"></div>
+    <div class="bg-noise"></div>
+  </div>
+
+  <header class="site-header" id="siteHeader">
+    <div class="container header-inner">
+      <a href="/" class="logo" aria-label="LASTBOT — на главную">
+        <svg class="logo-mark" viewBox="0 0 64 64" aria-hidden="true">
+          <path d="M32 4l24 14v28L32 60 8 46V18z" fill="none" stroke="url(#lgd)" stroke-width="4"/>
+          <path d="M32 20a12 12 0 1 0 0 24 12 12 0 0 0 0-24zm0 7a5 5 0 1 1 0 10 5 5 0 0 1 0-10z" fill="url(#lgd)"/>
+          <defs><linearGradient id="lgd" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#22d3ee"/><stop offset="1" stop-color="#8b5cf6"/>
+          </linearGradient></defs>
+        </svg>
+        <span class="logo-word">LAST<span class="logo-accent">BOT</span></span>
+      </a>
+      <div class="header-cta">
+        <button class="theme-toggle" id="themeToggle" type="button" aria-label="Светлая тема">
+          <svg class="ico-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A8.5 8.5 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <svg class="ico-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.6 4.6l1.8 1.8M17.6 17.6l1.8 1.8M19.4 4.6l-1.8 1.8M6.4 17.6l-1.8 1.8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        </button>
+        <div class="lang-switch" id="langSwitch">
+          <button class="lang-btn" id="langBtn" type="button" aria-haspopup="listbox" aria-expanded="false" aria-label="Выбор языка">
+            <svg class="lang-globe" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3 12h18M12 3c3 3.5 3 14.5 0 18M12 3c-3 3.5-3 14.5 0 18" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+            <span id="langCurrent">RU</span>
+            <svg class="lang-caret" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10l5 5 5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </button>
+          <ul class="lang-menu" id="langMenu" role="listbox" aria-label="Языки" hidden>
+            <li role="option" data-lang="ru">Русский</li>
+            <li role="option" data-lang="en">English</li>
+            <li role="option" data-lang="es">Español</li>
+            <li role="option" data-lang="de">Deutsch</li>
+            <li role="option" data-lang="fr">Français</li>
+            <li role="option" data-lang="pt">Português</li>
+            <li role="option" data-lang="zh">中文</li>
+            <li role="option" data-lang="ar">العربية</li>
+          </ul>
+        </div>
+        <a href="/" class="btn btn-ghost btn-sm">← На сайт</a>
+      </div>
+    </div>
+  </header>
+
+  <main id="main" class="dash-main">
+    <div class="container">
+      <div class="section-head reveal">
+        <span class="section-tag">// dashboard</span>
+        <h1 class="dash-title" data-ui="dashboardTitle">Кабинет альянса</h1>
+        <p data-ui="dashboardHint">Введите код альянса, выданный менеджером</p>
+      </div>
+
+      <form class="dash-lookup glass-card reveal" id="dashForm">
+        <label class="fld">
+          <span data-ui="dashboardCodeLabel">Код альянса</span>
+          <input id="dashCode" name="code" type="text" maxlength="64" autocomplete="off" placeholder="XXXXXXXX" style="text-transform: uppercase">
+        </label>
+        <button class="btn btn-primary" type="submit" data-ui="dashboardLookup">Показать баланс</button>
+      </form>
+
+      <p class="dash-error" id="dashError" role="alert" hidden></p>
+
+      <div class="dash-board" id="dashBoard" hidden>
+        <div class="dash-cards">
+          <div class="dash-card glass-card reveal">
+            <span class="dash-card-label" data-ui="dashboardBalance">Бонусные бото-месяцы</span>
+            <strong class="dash-card-value" id="dashBonusMonths">0</strong>
+          </div>
+          <div class="dash-card glass-card reveal">
+            <span class="dash-card-label" data-ui="dashboardCashback">Денежный кэшбэк</span>
+            <strong class="dash-card-value" id="dashCashback">$0.00</strong>
+          </div>
+        </div>
+
+        <div class="dash-section glass-card reveal">
+          <h2 data-ui="dashboardPurchases">История покупок</h2>
+          <div class="dash-table-wrap">
+            <table class="dash-table">
+              <thead>
+                <tr>
+                  <th>Дата</th><th>Ботов</th><th>Срок</th><th>Сумма</th><th>Кэшбэк (мес.)</th>
+                </tr>
+              </thead>
+              <tbody id="dashPurchasesBody"></tbody>
+            </table>
+            <p class="dash-empty" id="dashPurchasesEmpty" data-ui="dashboardNoData" hidden>Пока нет данных</p>
+          </div>
+        </div>
+
+        <div class="dash-section glass-card reveal">
+          <h2 data-ui="dashboardReferrals">Приведённые альянсы</h2>
+          <div class="dash-table-wrap">
+            <table class="dash-table">
+              <thead>
+                <tr>
+                  <th>Дата</th><th>Альянс</th><th>Ботов</th><th>Срок</th><th>Бонус (мес.)</th><th>Кэшбэк</th>
+                </tr>
+              </thead>
+              <tbody id="dashReferralsBody"></tbody>
+            </table>
+            <p class="dash-empty" id="dashReferralsEmpty" data-ui="dashboardNoData" hidden>Пока нет данных</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-bottom">
+      <p>© <span id="year">2026</span> LASTBOT. <span data-ui="footerRights">Все права защищены.</span></p>
+      <p class="footer-disclaimer" data-ui="footerDisclaimer">LASTBOT не аффилирован с IGG Inc. «Doomsday: Last Survivors» — товарный знак IGG. Используй сервис осознанно и в соответствии с правилами игры.</p>
+    </div>
+  </footer>
+
+  <script src="assets/js/i18n.js?v=11" defer></script>
+  <script src="assets/js/main.js?v=9" defer></script>
+</body>
+</html>

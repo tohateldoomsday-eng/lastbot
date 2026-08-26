@@ -15,9 +15,17 @@ services:
     environment:
       ADMIN_USER: ${ADMIN_USER:-ta-admin}
       ADMIN_PASS: ${ADMIN_PASS:?ADMIN_PASS is required - create .env from .env.example}
-      # Telegram-бот: автопостинг новостей в канал
+      # Telegram-бот: автопостинг новостей в канал + уведомления о триалах и акциях
       BOT_TOKEN: ${BOT_TOKEN:-}
       TELEGRAM_CHANNEL: ${TELEGRAM_CHANNEL:-@lastbotdls}
+      # Бизнес-логика: триал, рефералы, кэшбэк, курс рубля
+      TRIAL_DAYS: ${TRIAL_DAYS:-7}
+      TRIAL_BOTS: ${TRIAL_BOTS:-5}
+      REFERRAL_COMMISSION_PERCENT: ${REFERRAL_COMMISSION_PERCENT:-10}
+      CASHBACK_PERCENT: ${CASHBACK_PERCENT:-10}
+      RUB_RATE: ${RUB_RATE:-85}
+      # Секрет подписи JWT-токенов клиентского кабинета (/account)
+      CLIENT_JWT_SECRET: ${CLIENT_JWT_SECRET:-}
 
     # Для разработки без пересборки образа раскомментируйте:
     # - ./public:/usr/share/nginx/html:ro

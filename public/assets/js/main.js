@@ -6,6 +6,9 @@
   "use strict";
 
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  /* Примерный курс $ → ₽ для отображения цен (уточняется менеджером в Telegram) */
+  const RUB_RATE = 85;
   const $ = (sel, ctx) => (ctx || document).querySelector(sel);
   const $$ = (sel, ctx) => Array.from((ctx || document).querySelectorAll(sel));
 
@@ -40,6 +43,8 @@
   function updateLangUI() {
     const cur = document.getElementById("langCurrent");
     if (cur) cur.textContent = currentLang.toUpperCase();
+    const tb = document.getElementById("themeToggle");
+    if (tb) tb.setAttribute("aria-label", document.documentElement.classList.contains("light") ? tUI("themeToDark") : tUI("themeToLight"));
   }
 
   function applyLanguage(lang, isInit) {
@@ -87,6 +92,34 @@
       langMenu.hidden = true;
       langBtn.setAttribute("aria-expanded", "false");
       applyLanguage(opt.dataset.lang, false);
+    });
+  }
+
+  /* ---------- Тема (светлая / тёмная) ---------- */
+  const THEME_KEY = "lb_theme";
+  const themeMeta = document.querySelector('meta[name="theme-color"]');
+  function currentTheme() {
+    try {
+      const saved = localStorage.getItem(THEME_KEY);
+      if (saved === "light" || saved === "dark") return saved;
+    } catch { /* приватный режим */ }
+    return (window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches) ? "light" : "dark";
+  }
+  function applyTheme(t, save) {
+    document.documentElement.classList.toggle("light", t === "light");
+    document.documentElement.dataset.theme = t;
+    if (themeMeta) themeMeta.content = t === "light" ? "#eef2fa" : "#05070f";
+    const btn = document.getElementById("themeToggle");
+    if (btn) btn.setAttribute("aria-label", t === "light" ? tUI("themeToDark") : tUI("themeToLight"));
+    if (save) {
+      try { localStorage.setItem(THEME_KEY, t); } catch { /* приватный режим */ }
+    }
+  }
+  applyTheme(currentTheme(), false);
+  const themeToggle = document.getElementById("themeToggle");
+  if (themeToggle) {
+    themeToggle.addEventListener("click", () => {
+      applyTheme(document.documentElement.classList.contains("light") ? "dark" : "light", true);
     });
   }
 
@@ -344,6 +377,11 @@
       setTextIn(card, "h3", t.name);
       setTextIn(card, ".price-bots strong", t.bots);
       setTextIn(card, ".price-amount", t.price);
+      const usd = parseFloat(String(t.price || "").replace(/[^0-9.]/g, ""));
+      if (!isNaN(usd)) {
+        const rub = Math.round((usd * RUB_RATE) / 100) * 100;
+        setTextIn(card, ".price-rub", "≈ " + rub.toLocaleString("ru-RU") + " ₽");
+      }
       const ul = card.querySelector(".price-features");
       if (ul && Array.isArray(t.features)) {
         ul.textContent = "";
@@ -418,6 +456,9 @@
 
     /* Кнопка «Дашборд» в меню */
     applyDashboard(c);
+
+    /* Статы, топ альянсов, отзывы */
+    renderStatsAndTestimonials(c);
 
     /* Новости и промокоды — подмена базовых списков */
     if (Array.isArray(c.news && c.news.items) && c.news.items.length) {
@@ -752,14 +793,16 @@
   ];
 
   const codesListEl = $("#codesList");
+  const heroCodesEl = $("#heroCodes");
+  const heroCodesListEl = $("#heroCodesList");
 
   function copyCode(btn, code) {
     const done = () => {
       btn.classList.add("copied");
-      btn.textContent = "Скопировано ✓";
+      btn.textContent = tUI("copyDone") || "Скопировано ✓";
       setTimeout(() => {
         btn.classList.remove("copied");
-        btn.textContent = "Копировать";
+        btn.textContent = tUI("copyBtn") || "Копировать";
       }, 1600);
     };
     const fallback = () => {
@@ -799,8 +842,8 @@
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "code-copy";
-      btn.textContent = "Копировать";
-      btn.setAttribute("aria-label", "Скопировать код " + c.code);
+      btn.textContent = tUI("copyBtn") || "Копировать";
+      btn.setAttribute("aria-label", (tUI("copyBtn") || "Копировать") + " " + c.code);
       btn.addEventListener("click", () => copyCode(btn, c.code));
       row.append(value, btn);
 
@@ -821,11 +864,353 @@
       card.append(row, meta);
       codesListEl.append(card);
     });
+    renderHeroCodes();
+  }
+
+  /* Компактная панель промокодов в верхней части главного экрана */
+  function renderHeroCodes() {
+    if (heroCodesEl) heroCodesEl.hidden = !CODES.length;
+    if (!heroCodesListEl) return;
+    heroCodesListEl.textContent = "";
+    CODES.forEach((c) => {
+      const chip = document.createElement("div");
+      chip.className = "hero-code-chip";
+      const code = document.createElement("code");
+      code.className = "hero-code-value";
+      code.textContent = c.code;
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "code-copy";
+      btn.textContent = tUI("copyBtn") || "Копировать";
+      btn.setAttribute("aria-label", (tUI("copyBtn") || "Копировать") + " " + c.code);
+      btn.addEventListener("click", () => copyCode(btn, c.code));
+      const exp = document.createElement("span");
+      exp.className = "hero-code-exp";
+      exp.textContent = "⏳ " + c.expires;
+      chip.append(code, btn, exp);
+      heroCodesListEl.append(chip);
+    });
   }
 
   renderCodes();
 
   if (newsRefresh) newsRefresh.addEventListener("click", () => loadNews(true));
+
+  /* ============================================================
+     Новые системы: калькулятор цен, сроки, триал, акции,
+     отзывы, счётчики альянсов, дашборд
+     ============================================================ */
+
+  function escapeHtml(str) {
+    return String(str)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+  }
+
+  /* ---------- Статы, топ альянсов, отзывы (гидрация) ---------- */
+  function renderStatsAndTestimonials(c) {
+    if (!c) return;
+
+    if (c.stats) {
+      const el = document.getElementById("alliancesCount");
+      if (el && c.stats.alliancesCount != null) {
+        el.dataset.count = String(c.stats.alliancesCount);
+        if (el.dataset.done) el.textContent = String(c.stats.alliancesCount);
+      }
+    }
+
+    const grid = document.getElementById("testimonialsGrid");
+    if (grid && Array.isArray(c.testimonials)) {
+      grid.textContent = "";
+      c.testimonials.forEach((t) => {
+        if (!t) return;
+        const card = document.createElement("article");
+        card.className = "testimonial-card glass-card reveal in-view";
+        const starsCount = Math.max(0, Math.min(5, parseInt(t.rating, 10) || 0));
+        const stars = "★".repeat(starsCount);
+        const starsEl = document.createElement("div");
+        starsEl.className = "testimonial-stars";
+        starsEl.textContent = stars;
+        starsEl.setAttribute("aria-label", starsCount + "/5");
+        const text = document.createElement("p");
+        text.className = "testimonial-text";
+        text.textContent = t.text || "";
+        const meta = document.createElement("div");
+        meta.className = "testimonial-meta";
+        const name = document.createElement("strong");
+        name.textContent = t.name || "";
+        const sub = document.createElement("span");
+        sub.textContent = (t.alliance || "") + (t.date ? " · " + t.date : "");
+        meta.append(name, sub);
+        card.append(starsEl, text, meta);
+        grid.append(card);
+      });
+      grid.hidden = !c.testimonials.length;
+    }
+  }
+
+  /* ---------- Калькулятор цены (ползунок + сроки + акции) ---------- */
+  const PRICING_DEFAULTS = {
+    botPrices: [
+      { min: 1, max: 10, price: 2.0 },
+      { min: 11, max: 20, price: 1.8 },
+      { min: 21, max: 30, price: 1.5 },
+    ],
+    periods: [
+      { months: 1, coef: 1.0, discount: 0 },
+      { months: 3, coef: 2.5, discount: 17 },
+      { months: 6, coef: 5.0, discount: 17 },
+      { months: 12, coef: 9.0, discount: 25 },
+    ],
+    rate: RUB_RATE,
+    promotions: [],
+    referral: { cashbackPercent: 10, commissionPercent: 10 },
+  };
+
+  let pricingData = PRICING_DEFAULTS;
+  let currentMonths = 1;
+
+  const botsRange = $("#botsRange");
+  const calcBotsVal = $("#calcBotsVal");
+  const calcUsd = $("#calcUsd");
+  const calcPerBot = $("#calcPerBot");
+  const calcRub = $("#calcRub");
+  const calcSaveBox = $("#calcSaveBox");
+  const calcSaveVal = $("#calcSaveVal");
+  const promoBanner = $("#promoBanner");
+
+  function fmtUsd(n) { return "$" + n.toFixed(2); }
+  function fmtRub(n) { return "≈ " + n.toLocaleString("ru-RU") + " ₽"; }
+
+  function pricePerBotFor(n) {
+    let price = 2.0;
+    for (const tier of pricingData.botPrices || []) {
+      if (n >= (tier.min || 0) && n <= (tier.max || Infinity)) { price = tier.price; break; }
+    }
+    return price;
+  }
+
+  function periodFor(months) {
+    const list = pricingData.periods || [];
+    return list.find((p) => p.months === months) || { months, coef: months, discount: 0 };
+  }
+
+  function promoFor(months, bots) {
+    const now = Date.now();
+    return (pricingData.promotions || []).filter((pr) => {
+      if (!pr || (pr.usageLimit != null && (pr.used || 0) >= pr.usageLimit)) return false;
+      const applies = pr.appliesTo || {};
+      if (Array.isArray(applies.periods) && applies.periods.length && !applies.periods.includes(months)) return false;
+      if (pr.minBots != null && bots < pr.minBots) return false;
+      if (pr.maxBots != null && bots > pr.maxBots) return false;
+      const start = pr.startDate ? new Date(pr.startDate).getTime() : 0;
+      const end = pr.endDate ? new Date(pr.endDate + "T23:59:59").getTime() : Infinity;
+      return now >= start && now <= end;
+    });
+  }
+
+  function renderPrice() {
+    if (!botsRange) return;
+    const bots = parseInt(botsRange.value, 10);
+    const perBot = pricePerBotFor(bots);
+    const period = periodFor(currentMonths);
+    const base = 2.0 * bots * period.coef; // базовая цена без прогрессивной скидки
+    let total = perBot * bots * period.coef;
+    let oldPrice = null;
+    const promo = promoFor(currentMonths, bots)[0];
+
+    calcBotsVal.textContent = bots;
+    calcPerBot.textContent = fmtUsd(perBot) + (tUI("calcPerBot") || " / бот");
+
+    if (promo) {
+      const badge = '<span class="promo-badge">' + escapeHtml(tUI("promoNew") || "Акция!") + "</span>";
+      const title = "<strong>" + escapeHtml(promo.name || "") + "</strong>";
+      const desc = "<span class=\"promo-desc\">" + escapeHtml(promo.banner || "") + (promo.description ? " · " + escapeHtml(promo.description) : "") + "</span>";
+      promoBanner.innerHTML = badge + " " + title + " " + desc;
+      promoBanner.hidden = false;
+      if (promo.type === "percent") {
+        oldPrice = total;
+        total = total * (1 - (promo.value || 0) / 100);
+      } else if (promo.type === "fixed") {
+        oldPrice = total;
+        total = Math.max(0, total - (promo.value || 0));
+      }
+      /* bots-gift: скидка к цене не применяется, только баннер */
+    } else if (promoBanner) {
+      promoBanner.hidden = true;
+    }
+
+    if (calcUsd) {
+      calcUsd.innerHTML = (oldPrice != null ? '<s class="calc-old">' + fmtUsd(oldPrice) + "</s> " : "") + fmtUsd(total);
+    }
+    if (calcRub) calcRub.textContent = fmtRub(Math.round((total * pricingData.rate) / 100) * 100);
+    const save = Math.max(0, base - total);
+    if (calcSaveVal) calcSaveVal.textContent = fmtUsd(save);
+    if (calcSaveBox) calcSaveBox.hidden = save <= 0;
+  }
+
+  async function loadPricing() {
+    try {
+      const res = await fetch("/api/pricing", { credentials: "same-origin" });
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data && data.ok) pricingData = { ...PRICING_DEFAULTS, ...data };
+      renderPrice();
+    } catch { /* офлайн — работают дефолты */ }
+  }
+
+  if (botsRange) {
+    const periodTabs = $$("#periodTabs .calc-period");
+    periodTabs.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        currentMonths = parseInt(btn.dataset.months, 10);
+        periodTabs.forEach((b) => {
+          b.classList.toggle("is-active", b === btn);
+          b.setAttribute("aria-selected", String(b === btn));
+        });
+        renderPrice();
+      });
+    });
+    botsRange.addEventListener("input", renderPrice);
+    renderPrice();
+    loadPricing();
+  }
+
+  /* ---------- Модалка бесплатного триала ---------- */
+  const trialModal = $("#trialModal");
+  const trialForm = $("#trialForm");
+  const trialSuccess = $("#trialSuccess");
+  const trialError = $("#trialError");
+  const trialSubmitBtn = $("#trialSubmitBtn");
+  const trialSuccessText = $("#trialSuccessText");
+  const trialOpenBtn = $("#trialOpenBtn");
+
+  function openTrial() {
+    if (!trialModal) return;
+    trialModal.hidden = false;
+    document.body.classList.add("modal-open");
+    const first = $("#trialAlliance");
+    if (first) first.focus();
+  }
+  function closeTrial() {
+    if (!trialModal) return;
+    trialModal.hidden = true;
+    document.body.classList.remove("modal-open");
+  }
+
+  if (trialOpenBtn) trialOpenBtn.addEventListener("click", openTrial);
+  const trialCloseBtn = $("#trialCloseBtn");
+  const trialCloseOkBtn = $("#trialCloseOkBtn");
+  if (trialCloseBtn) trialCloseBtn.addEventListener("click", closeTrial);
+  if (trialCloseOkBtn) trialCloseOkBtn.addEventListener("click", closeTrial);
+  if (trialModal) {
+    trialModal.addEventListener("click", (e) => { if (e.target === trialModal) closeTrial(); });
+  }
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && trialModal && !trialModal.hidden) closeTrial();
+  });
+
+  if (trialForm) {
+    trialForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const allianceName = ($("#trialAlliance").value || "").trim();
+      const leaderName = ($("#trialLeader").value || "").trim();
+      const contactTelegram = ($("#trialContact").value || "").trim();
+      const errText = tUI("trialError") || "Не удалось отправить заявку. Попробуйте ещё раз.";
+      if (!allianceName || !leaderName || !contactTelegram) {
+        trialError.textContent = errText;
+        trialError.hidden = false;
+        return;
+      }
+      trialError.hidden = true;
+      trialSubmitBtn.disabled = true;
+      trialSubmitBtn.textContent = tUI("trialSending") || "Отправляем…";
+      try {
+        const res = await fetch("/api/trial", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ allianceName, leaderName, contactTelegram }),
+        });
+        const data = await res.json();
+        if (res.ok && data && data.ok) {
+          trialForm.hidden = true;
+          trialSuccess.hidden = false;
+          let text = tUI("trialSuccessText") || "Менеджер свяжется с вами в Telegram и активирует триал: {days} дней на {bots} ботов. Ваш реферальный код: {code}";
+          text = text
+            .replace("{days}", String(data.trialDays || 7))
+            .replace("{bots}", String(data.trialBots || 5))
+            .replace("{code}", escapeHtml(data.referralCode || "—"));
+          trialSuccessText.innerHTML = text.replace(/\n/g, "<br>");
+        } else {
+          trialError.textContent = (data && data.error) || errText;
+          trialError.hidden = false;
+        }
+      } catch {
+        trialError.textContent = errText;
+        trialError.hidden = false;
+      } finally {
+        trialSubmitBtn.disabled = false;
+        trialSubmitBtn.textContent = tUI("trialSubmit") || "Отправить заявку";
+      }
+    });
+  }
+
+  /* ---------- Дашборд альянса (страница /dashboard) ---------- */
+  const dashForm = $("#dashForm");
+  if (dashForm) {
+    const dashBoard = $("#dashBoard");
+    const dashError = $("#dashError");
+
+    function renderDashTable(bodyId, emptyId, rows) {
+      const body = document.getElementById(bodyId);
+      const empty = document.getElementById(emptyId);
+      if (!body) return;
+      body.textContent = "";
+      if (empty) empty.hidden = rows.length > 0;
+      rows.forEach((cells) => {
+        const tr = document.createElement("tr");
+        cells.forEach((v) => {
+          const td = document.createElement("td");
+          td.textContent = v == null ? "" : String(v);
+          tr.append(td);
+        });
+        body.append(tr);
+      });
+    }
+
+    dashForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const code = ($("#dashCode").value || "").trim().toUpperCase();
+      if (!code) return;
+      dashError.hidden = true;
+      const notFound = tUI("dashboardNotFound") || "Код не найден. Уточните у менеджера.";
+      try {
+        const res = await fetch("/api/dashboard?code=" + encodeURIComponent(code), { credentials: "same-origin" });
+        const data = await res.json();
+        if (res.ok && data && data.ok) {
+          dashBoard.hidden = false;
+          $("#dashBonusMonths").textContent = data.balance.bonusMonths || 0;
+          $("#dashCashback").textContent = "$" + ((data.balance.cashbackCents || 0) / 100).toFixed(2);
+          renderDashTable("dashPurchasesBody", "dashPurchasesEmpty", (data.balance.purchases || []).map((p) => [
+            p.date || "", p.bots || 0, (p.months || 0) + " мес", "$" + (p.priceUsd || 0), "+" + (p.cashbackMonths || 0),
+          ]));
+          renderDashTable("dashReferralsBody", "dashReferralsEmpty", (data.balance.referrals || []).map((r) => [
+            r.date || "", r.buyerAlliance || "", r.bots || 0, (r.months || 0) + " мес", "+" + (r.bonusMonths || 0), "$" + ((r.cashbackCents || 0) / 100).toFixed(2),
+          ]));
+        } else {
+          dashBoard.hidden = true;
+          dashError.textContent = (data && data.error) || notFound;
+          dashError.hidden = false;
+        }
+      } catch {
+        dashBoard.hidden = true;
+        dashError.textContent = notFound;
+        dashError.hidden = false;
+      }
+    });
+  }
 
   /* Язык: переводы или админ-контент (для русского) */
   applyLanguage(detectLang(), true);

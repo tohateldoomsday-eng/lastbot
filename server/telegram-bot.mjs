@@ -56,7 +56,11 @@ function escapeHtml(s) {
 export function startTelegramBot({ token, channel, dataDir }) {
   if (!token) {
     console.log("Telegram-бот: BOT_TOKEN не задан — автопостинг отключён");
-    return { enabled: false, postNewNews: async () => ({ posted: 0, error: "BOT_TOKEN не задан" }) };
+    return {
+      enabled: false,
+      postNewNews: async () => ({ posted: 0, error: "BOT_TOKEN не задан" }),
+      sendMessage: async () => ({ ok: false, error: "BOT_TOKEN не задан" }),
+    };
   }
 
   const postedFile = path.join(dataDir, "telegram-posted.json");
@@ -123,5 +127,16 @@ export function startTelegramBot({ token, channel, dataDir }) {
   setInterval(postNewNews, POST_INTERVAL);
   setTimeout(postNewNews, 20000);
 
-  return { enabled: true, postNewNews };
+  /* Уведомления (триалы, истекающие акции и т.д.) — вне цикла новостей */
+  async function sendMessage(text) {
+    try {
+      await postMessage(text);
+      return { ok: true };
+    } catch (err) {
+      console.log("Telegram-бот: не удалось отправить уведомление:", err.message);
+      return { ok: false, error: err.message };
+    }
+  }
+
+  return { enabled: true, postNewNews, sendMessage };
 }

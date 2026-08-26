@@ -7,6 +7,17 @@
   <meta name="description" content="Автопомощь альянсу в Doomsday: Last Survivors: бот кликает кнопки помощи 24/7, ускоряет стройку и исследования союзников, собирает подарки альянса — сундук славы наполняется в 3 раза быстрее. Тарифы от $20/мес.">
   <meta name="keywords" content="бот помощи альянсу DLS, помощь альянсу Doomsday Last Survivors, автокликер помощи, подарки альянса, сундук славы, автоматизация DLS, бот DLS">
   <meta name="theme-color" content="#05070f">
+  <script>
+    /* Тема до отрисовки (анти-FOUC): сохранённый выбор или системная тема */
+    (function () {
+      try {
+        var t = localStorage.getItem("lb_theme");
+        if (t !== "light" && t !== "dark") t = (window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches) ? "light" : "dark";
+        document.documentElement.classList.toggle("light", t === "light");
+        document.documentElement.dataset.theme = t;
+      } catch (e) {}
+    })();
+  </script>
   <link rel="canonical" href="https://lastbot.gg/">
 
   <!-- Open Graph / Twitter -->
@@ -27,7 +38,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="assets/css/style.css?v=6">
+  <link rel="stylesheet" href="assets/css/style.css?v=12">
 
   <!-- Microdata: SoftwareApplication -->
   <script type="application/ld+json">
@@ -84,10 +95,14 @@
         <a href="#pricing" data-ui="navPricing">Тарифы</a>
         <a href="#news" data-ui="navNews">Новости</a>
         <a href="#faq" data-ui="navFaq">FAQ</a>
-        <a href="#" id="dashboardLink" data-ui="navDashboard" target="_blank" rel="noopener">Дашборд</a>
+        <a href="/account" id="dashboardLink" data-ui="navDashboard">Кабинет</a>
       </nav>
 
       <div class="header-cta">
+        <button class="theme-toggle" id="themeToggle" type="button" aria-label="Светлая тема">
+          <svg class="ico-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A8.5 8.5 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <svg class="ico-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.6 4.6l1.8 1.8M17.6 17.6l1.8 1.8M19.4 4.6l-1.8 1.8M6.4 17.6l-1.8 1.8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        </button>
         <div class="lang-switch" id="langSwitch">
           <button class="lang-btn" id="langBtn" type="button" aria-haspopup="listbox" aria-expanded="false" aria-label="Выбор языка">
             <svg class="lang-globe" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3 12h18M12 3c3 3.5 3 14.5 0 18M12 3c-3 3.5-3 14.5 0 18" fill="none" stroke="currentColor" stroke-width="2"/></svg>
@@ -119,37 +134,56 @@
     <!-- ======= HERO ======= -->
     <section class="hero" id="hero">
       <div class="container hero-inner">
+        <div class="hero-codes reveal" id="heroCodes">
+          <div class="hero-codes-row">
+            <div class="hero-codes-head">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12v9H4v-9M2 7h20v5H2zM12 22V7M12 7s-1.5-4-4.5-4.5C5 2 4.5 3.5 5 5c.6 1.8 3 2.5 7 2.5s6.4-.7 7-2.5c.5-1.5 0-3-2.5-2.5C13.5 3 12 7 12 7z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <span data-ui="heroCodesTitle">Активные промокоды</span>
+            </div>
+            <div class="hero-codes-list" id="heroCodesList"></div>
+          </div>
+          <details class="hero-codes-how">
+            <summary>
+              <span data-ui="codesHowTitle">Как активировать промокод</span>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10l5 5 5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </summary>
+            <ol>
+              <li data-ui="codesHowStep1">Открой игру и нажми на портрет командира (слева сверху).</li>
+              <li data-ui="codesHowStep2">Затем «Настройки» → иконка «Подарочный код».</li>
+              <li data-ui="codesHowStep3">Вставь код (регистр важен!) → «Обменять». Награда придёт во внутриигровую почту.</li>
+            </ol>
+          </details>
+        </div>
+
         <div class="hero-badge reveal">
           <span class="pulse-dot" aria-hidden="true"></span>
           <span class="hero-badge-text">Бот помощи альянсу · облако 24/7</span>
         </div>
 
         <h1 class="hero-title">
-          <span class="hero-line hero-line-1 reveal">Бот помощи <span class="grad-text">альянсу</span> для DLS</span>
+          <span class="hero-line hero-line-1 reveal">Командир, усиль свой <span class="grad-text">альянс</span> с LASTBOT</span>
           <span class="hero-line hero-line-2" aria-label="Помогай. Собирай. Доминируй.">
             <span class="kw kw-1">Помогай.</span><span class="kw kw-2">Собирай.</span><span class="kw kw-3">Доминируй.</span>
           </span>
         </h1>
 
         <p class="hero-sub reveal">
-          Автоклики по кнопкам помощи: ускоряй стройку и исследования
-          <strong>союзников</strong>, зарабатывай очки и репутацию альянса.
-          Бот собирает подарки — и сундук славы наполняется
-          <strong>в 3 раза быстрее</strong>. Всё в облаке, 24/7.
+          Автоматическая помощь союзникам <strong>24/7</strong>, сундук славы
+          <strong>в 3 раза быстрее</strong>, рейтинг альянса растёт без твоего участия.
         </p>
 
         <div class="hero-actions reveal">
           <a href="#pricing" class="btn btn-primary btn-lg">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2L4.5 13.5H11L10 22l8.5-11.5H12z" fill="currentColor"/></svg>
-            <span data-ui="heroCta">Начать использовать</span>
+            <span data-ui="heroCta">Выбрать тариф</span>
           </a>
-          <a href="#how" class="btn btn-ghost btn-lg" data-ui="heroHow">Как это работает</a>
+          <button class="btn btn-ghost btn-lg" id="trialOpenBtn" type="button" data-ui="trialBtn">Попробовать бесплатно</button>
         </div>
 
         <ul class="hero-trust reveal" aria-label="Ключевые гарантии">
           <li>Безопасно для аккаунта</li>
           <li>Автопомощь без пропусков</li>
-          <li>PayPal / Crypto</li>
+          <li>Оплата в Telegram</li>
         </ul>
 
         <dl class="hero-stats reveal">
@@ -169,6 +203,10 @@
             <dt data-ui="statSavings">Экономия в неделю</dt>
             <dd><span data-count="10">0</span>+ <span data-ui="statHours">ч</span></dd>
           </div>
+          <div class="stat">
+            <dt data-ui="statAlliances">Альянсов доверяют</dt>
+            <dd><span data-count="150" id="alliancesCount">0</span>+</dd>
+          </div>
         </dl>
       </div>
       <div class="hero-scroll" aria-hidden="true">
@@ -182,8 +220,8 @@
       <div class="container">
         <div class="section-head reveal">
           <span class="section-tag" data-ui="tagWhy">// почему мы</span>
-          <h2>Время — главный ресурс <span class="grad-text">в пустоши</span></h2>
-          <p>Мы забираем рутину на себя, чтобы ты играл только в самое интересное.</p>
+          <h2>Почему командиры выбирают <span class="grad-text">LASTBOT</span></h2>
+          <p>Мы забираем рутину на себя, чтобы твой альянс доминировал на сервере.</p>
         </div>
 
         <div class="why-grid">
@@ -222,12 +260,12 @@
 
           <article class="glass-card reveal">
             <div class="card-icon icon-amber" aria-hidden="true">
-              <svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9h-2a7 7 0 1 1-7-7V3z" fill="currentColor"/></svg>
+              <svg viewBox="0 0 24 24"><path d="M20 12v9H4v-9M2 7h20v5H2zM12 22V7M12 7s-1.5-4-4.5-4.5C5 2 4.5 3.5 5 5c.6 1.8 3 2.5 7 2.5s6.4-.7 7-2.5c.5-1.5 0-3-2.5-2.5C13.5 3 12 7 12 7z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </div>
-            <h3>Поддержка 24/7</h3>
-            <p>Живые люди в Telegram и на почте. Среднее время ответа — 15 минут, даже ночью.</p>
-            <div class="xp-bar" role="img" aria-label="Скорость ответа поддержки: 15 минут">
-              <div class="xp-fill" data-progress="88"><span>REPLY ~15 MIN</span></div>
+            <h3>Реферальные бонусы</h3>
+            <p>Приведи другой альянс — получи их ботов на месяц бесплатно и 10% от суммы их покупки на свой счёт.</p>
+            <div class="xp-bar" role="img" aria-label="Реферальный бонус: 10%">
+              <div class="xp-fill" data-progress="100"><span>REF +10%</span></div>
             </div>
           </article>
         </div>
@@ -332,88 +370,89 @@
               </div>
             </div>
           </article>
+
+          <!-- Referral program -->
+          <article class="bento-item bento-wide glass-card reveal">
+            <div class="bento-top">
+              <div class="card-icon icon-green" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M20 12v9H4v-9M2 7h20v5H2zM12 22V7M12 7s-1.5-4-4.5-4.5C5 2 4.5 3.5 5 5c.6 1.8 3 2.5 7 2.5s6.4-.7 7-2.5c.5-1.5 0-3-2.5-2.5C13.5 3 12 7 12 7z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </div>
+              <span class="bento-tag tag-green">BONUS</span>
+            </div>
+            <div class="bento-wide-body">
+              <div>
+                <h3>Реферальная программа</h3>
+                <p>Уникальный код альянса, бонусные бото-месяцы и денежный кэшбэк за каждого приведённого союзника. Баланс и история — в личном кабинете.</p>
+              </div>
+              <a class="btn btn-ghost btn-sm" href="/dashboard" data-ui="refCodeLink">Реферальный код альянса</a>
+            </div>
+          </article>
         </div>
       </div>
     </section>
 
-    <!-- ======= PRICING ======= -->
+    <!-- ======= PRICING (калькулятор) ======= -->
     <section class="section" id="pricing">
       <div class="container">
         <div class="section-head reveal">
           <span class="section-tag" data-ui="tagPricing">// тарифы</span>
-          <h2>Простая цена: <span class="grad-text">$2 за бота</span></h2>
-          <p>Чем больше ботов — тем быстрее растёт твой альянс. Все тарифы включают все функции и поддержку 24/7.</p>
+          <h2>Собери свой <span class="grad-text">пакет ботов</span></h2>
+          <p>Двигай ползунок, выбирай срок — цена считается мгновенно, в долларах и рублях.</p>
         </div>
 
-        <div class="pricing-grid">
-          <!-- Basic -->
-          <article class="price-card glass-card reveal">
-            <div class="price-lvl">LVL 1</div>
-            <h3>Базовый</h3>
-            <div class="price-bots"><strong>10</strong> ботов</div>
-            <div class="price">
-              <span class="price-amount">$20</span>
-              <span class="price-period" data-ui="pricePeriod">/ месяц</span>
-            </div>
-            <div class="price-per" data-ui="pricePerBot">$2.00 / бот</div>
-            <ul class="price-features">
-              <li>Все функции ботов</li>
-              <li>До 10 аккаунтов</li>
-              <li>Поддержка 24/7</li>
-              <li>Доставка до 24 часов</li>
-            </ul>
-            <a href="mailto:support@lastbot.gg?subject=Оплата%20тарифа%20Базовый" class="btn btn-ghost btn-block" data-ui="buyBtn">Оплатить</a>
-          </article>
+        <div class="pricing-calc glass-card reveal">
+          <div class="promo-banner" id="promoBanner" hidden></div>
 
-          <!-- Optimal -->
-          <article class="price-card price-popular glass-card reveal">
-            <div class="price-badge" data-ui="popularBadge">ХИТ · лучший выбор</div>
-            <div class="price-lvl">LVL 2</div>
-            <h3>Оптимальный</h3>
-            <div class="price-bots"><strong>20</strong> ботов</div>
-            <div class="price">
-              <span class="price-amount">$40</span>
-              <span class="price-period" data-ui="pricePeriod">/ месяц</span>
+          <div class="calc-slider">
+            <div class="calc-slider-head">
+              <span data-ui="calcBots">Ботов</span>
+              <strong id="calcBotsVal">10</strong>
             </div>
-            <div class="price-per" data-ui="pricePerBot">$2.00 / бот</div>
-            <ul class="price-features">
-              <li>Все функции ботов</li>
-              <li>До 20 аккаунтов</li>
-              <li>Приоритетная поддержка</li>
-              <li>Доставка обычно мгновенно</li>
-              <li>Бонус: скрипты для альянса</li>
-            </ul>
-            <a href="mailto:support@lastbot.gg?subject=Оплата%20тарифа%20Оптимальный" class="btn btn-primary btn-block" data-ui="buyBtn">Оплатить</a>
-          </article>
+            <input type="range" id="botsRange" min="1" max="30" step="1" value="10" aria-label="Количество ботов">
+            <div class="calc-scale" aria-hidden="true"><span>1</span><span>10</span><span>20</span><span>30</span></div>
+          </div>
 
-          <!-- Pro -->
-          <article class="price-card glass-card reveal">
-            <div class="price-lvl">LVL 3</div>
-            <h3>Про</h3>
-            <div class="price-bots"><strong>30</strong> ботов</div>
-            <div class="price">
-              <span class="price-amount">$60</span>
-              <span class="price-period" data-ui="pricePeriod">/ месяц</span>
+          <div class="calc-periods" role="tablist" aria-label="Срок подписки" id="periodTabs">
+            <button class="calc-period is-active" type="button" role="tab" aria-selected="true" data-months="1"><span data-ui="period1">1 месяц</span></button>
+            <button class="calc-period" type="button" role="tab" aria-selected="false" data-months="3"><span data-ui="period3">3 месяца</span><em class="period-badge">−17%</em></button>
+            <button class="calc-period" type="button" role="tab" aria-selected="false" data-months="6"><span data-ui="period6">6 месяцев</span><em class="period-badge">−17%</em></button>
+            <button class="calc-period" type="button" role="tab" aria-selected="false" data-months="12"><span data-ui="period12">12 месяцев</span><em class="period-badge">−25%</em></button>
+          </div>
+
+          <div class="calc-summary">
+            <div class="calc-total">
+              <span class="calc-label" data-ui="calcTotal">Итого</span>
+              <div class="calc-amounts">
+                <span class="calc-usd" id="calcUsd">$20</span>
+                <span class="calc-per" id="calcPerBot">$2.00 / бот</span>
+                <span class="calc-rub" id="calcRub">≈ 1 700 ₽</span>
+              </div>
             </div>
-            <div class="price-per" data-ui="pricePerBot">$2.00 / бот</div>
-            <ul class="price-features">
-              <li>Все функции ботов</li>
-              <li>До 30 аккаунтов</li>
-              <li>VIP-поддержка 24/7</li>
-              <li>Доставка мгновенно</li>
-              <li>Индивидуальные сценарии</li>
-            </ul>
-            <a href="mailto:support@lastbot.gg?subject=Оплата%20тарифа%20Про" class="btn btn-ghost btn-block" data-ui="buyBtn">Оплатить</a>
-          </article>
+            <div class="calc-save" id="calcSaveBox"><span data-ui="calcSavings">Вы экономите</span> <strong id="calcSaveVal">$0</strong></div>
+            <p class="calc-cashback" data-ui="calcCashback">При каждой покупке — 10% кэшбэка бонусными бото-месяцами</p>
+          </div>
+
+          <div class="calc-actions">
+            <a href="https://t.me/lastbotdls" target="_blank" rel="noopener" class="btn btn-primary btn-lg" data-ui="buyBtn">Купить в Telegram</a>
+            <a href="https://t.me/lastbotdls" target="_blank" rel="noopener" class="btn btn-ghost btn-lg" data-ui="consultBtn">Получить консультацию</a>
+          </div>
         </div>
 
         <div class="pricing-notes reveal">
-          <div class="pay-methods" aria-label="Способы оплаты">
-            <span class="pay-chip pay-paypal">PayPal</span>
-            <span class="pay-chip pay-crypto">₿ Crypto (BTC · USDT · ETH)</span>
-          </div>
-          <p class="note-renewal">Подписка продлевается автоматически каждый месяц. Отключить автопродление можно в любой момент в личном сообщении поддержке.</p>
+          <p class="note-renewal">Оплата и условия — с менеджером в Telegram (@lastbotdls). При каждой покупке начисляется 10% кэшбэка бонусными бото-месяцами. Цены в рублях ориентировочные: курс ≈85 ₽/$.</p>
         </div>
+      </div>
+    </section>
+
+    <!-- ======= TESTIMONIALS ======= -->
+    <section class="section" id="testimonials">
+      <div class="container">
+        <div class="section-head reveal">
+          <span class="section-tag">// отзывы</span>
+          <h2 data-ui="testimonialsTitle">Что говорят командиры</h2>
+          <p data-ui="testimonialsSub">Отзывы лидеров альянсов, которые уже доминируют с LASTBOT</p>
+        </div>
+        <div class="testimonials-grid" id="testimonialsGrid"></div>
       </div>
     </section>
 
@@ -487,13 +526,13 @@
         <ol class="steps">
           <li class="step reveal">
             <div class="step-num">01</div>
-            <h3>Выбери тариф</h3>
-            <p>10, 20 или 30 ботов — под размер твоей фермы. Все тарифы включают все функции.</p>
+            <h3>Выбери пакет</h3>
+            <p>Собери калькулятором нужное количество ботов и срок — или обсуди с менеджером персональные условия.</p>
           </li>
           <li class="step reveal">
             <div class="step-num">02</div>
-            <h3>Оплати подписку</h3>
-            <p>PayPal или криптовалюта. Подписка на месяц с автопродлением — отключить можно в любой момент.</p>
+            <h3>Оплати через Telegram</h3>
+            <p>Напиши менеджеру — он подберёт тариф и обсудит удобный способ оплаты: рубли, карты или крипта.</p>
           </li>
           <li class="step reveal">
             <div class="step-num">03</div>
@@ -570,7 +609,7 @@
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
             </summary>
             <div class="faq-body">
-              <p>Зависит от тарифа: Базовый — до 10, Оптимальный — до 20, Про — до 30 аккаунтов одновременно. Все боты работают параллельно и независимо друг от друга.</p>
+              <p>Зависит от пакета: от 1 до 30 ботов одновременно. Все боты работают параллельно и независимо друг от друга.</p>
             </div>
           </details>
 
@@ -583,6 +622,46 @@
               <p>Нет. Всё крутится на наших облачных серверах. Тебе нужен только браузер — управлять ботами можно даже с телефона.</p>
             </div>
           </details>
+
+          <details class="faq-item glass-card reveal">
+            <summary>
+              Что такое бонусные бото-месяцы?
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            </summary>
+            <div class="faq-body">
+              <p>Это бесплатные месяцы ботов, которые можно использовать при будущих покупках: 3 бото-месяца = 3 месяца для одного бота или 1 месяц для трёх. Начисляются автоматически — 10% от каждой покупки.</p>
+            </div>
+          </details>
+
+          <details class="faq-item glass-card reveal">
+            <summary>
+              Как работает реферальная программа?
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            </summary>
+            <div class="faq-body">
+              <p>Каждый альянс получает уникальный реферальный код. Если другой альянс покупает пакет по вашему коду — вы получаете их количество ботов на 1 месяц бесплатно и 10% от суммы покупки денежным кэшбэком.</p>
+            </div>
+          </details>
+
+          <details class="faq-item glass-card reveal">
+            <summary>
+              Как получить бесплатный триал?
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            </summary>
+            <div class="faq-body">
+              <p>Нажми «Попробовать бесплатно», оставь название альянса и Telegram — менеджер активирует 7 дней на 5 ботов. После триала — персональная скидка 15% на первый платный месяц.</p>
+            </div>
+          </details>
+
+          <details class="faq-item glass-card reveal">
+            <summary>
+              Можно ли менять состав ботов?
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            </summary>
+            <div class="faq-body">
+              <p>Да. Альянс покупает пул ботов — распределяй их между участниками как угодно и меняй состав в любой момент.</p>
+            </div>
+          </details>
         </div>
       </div>
     </section>
@@ -592,8 +671,8 @@
       <div class="container">
         <div class="cta-panel reveal">
           <div class="cta-glow" aria-hidden="true"></div>
-          <h2>Готов усилить <span class="grad-text">свой альянс</span>?</h2>
-          <p>Подключи ботов сегодня — помощь союзникам придёт мгновенно, подарки соберутся сами, а сундук славы начнёт наполняться в 3 раза быстрее.</p>
+          <h2>Не дай соперникам обогнать <span class="grad-text">тебя</span></h2>
+          <p>Начни доминировать с LASTBOT сегодня — 7 дней триала бесплатно для твоего альянса.</p>
           <div class="cta-actions">
             <a href="#pricing" class="btn btn-primary btn-lg" data-ui="ctaBtnTariff">Выбрать тариф</a>
             <a href="https://t.me/lastbotdls" target="_blank" rel="noopener" class="btn btn-ghost btn-lg" data-ui="ctaBtnTelegram">Задать вопрос в Telegram</a>
@@ -601,6 +680,34 @@
         </div>
       </div>
     </section>
+    <!-- ======= TRIAL MODAL ======= -->
+    <div class="modal-overlay" id="trialModal" hidden>
+      <div class="modal-card glass-card" role="dialog" aria-modal="true" aria-labelledby="trialModalTitle">
+        <button class="modal-close" id="trialCloseBtn" type="button" aria-label="Закрыть">✕</button>
+        <h2 id="trialModalTitle" data-ui="trialModalTitle">Бесплатный триал для альянса</h2>
+        <form id="trialForm" novalidate>
+          <label class="fld">
+            <span data-ui="trialAlliance">Название альянса</span>
+            <input id="trialAlliance" name="allianceName" type="text" maxlength="100" required>
+          </label>
+          <label class="fld">
+            <span data-ui="trialLeader">Ник лидера</span>
+            <input id="trialLeader" name="leaderName" type="text" maxlength="100" required>
+          </label>
+          <label class="fld">
+            <span data-ui="trialContact">Контактный Telegram</span>
+            <input id="trialContact" name="contactTelegram" type="text" maxlength="100" required placeholder="@username">
+          </label>
+          <p class="trial-error" id="trialError" role="alert" hidden></p>
+          <button class="btn btn-primary btn-block" type="submit" id="trialSubmitBtn" data-ui="trialSubmit">Отправить заявку</button>
+        </form>
+        <div class="trial-success" id="trialSuccess" hidden>
+          <h3 data-ui="trialSuccessTitle">Заявка принята!</h3>
+          <p id="trialSuccessText"></p>
+          <button class="btn btn-ghost btn-block" id="trialCloseOkBtn" type="button" data-ui="trialClose">Закрыть</button>
+        </div>
+      </div>
+    </div>
   </main>
 
   <!-- ======= FOOTER ======= -->
@@ -649,7 +756,7 @@
     </div>
   </footer>
 
-  <script src="assets/js/i18n.js?v=7" defer></script>
-  <script src="assets/js/main.js?v=5" defer></script>
+  <script src="assets/js/i18n.js?v=11" defer></script>
+  <script src="assets/js/main.js?v=9" defer></script>
 </body>
 </html>

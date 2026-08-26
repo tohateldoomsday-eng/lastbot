@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Кабинет альянса — LASTBOT</title>
+  <meta name="description" content="Личный кабинет лидера альянса LASTBOT: баланс бото-месяцев, кэшбэк, реферальная программа, история покупок.">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#05070f">
+  <script>
+    (function () {
+      try {
+        var t = localStorage.getItem("lb_theme");
+        if (t !== "light" && t !== "dark") t = (window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches) ? "light" : "dark";
+        document.documentElement.classList.toggle("light", t === "light");
+        document.documentElement.dataset.theme = t;
+      } catch (e) {}
+    })();
+  </script>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%2322d3ee'/%3E%3Cstop offset='1' stop-color='%238b5cf6'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M32 4l24 14v28L32 60 8 46V18z' fill='none' stroke='url(%23g)' stroke-width='4'/%3E%3Cpath d='M32 20a12 12 0 1 0 0 24 12 12 0 0 0 0-24zm0 7a5 5 0 1 1 0 10 5 5 0 0 1 0-10z' fill='url(%23g)'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/style.css?v=12">
+  <link rel="stylesheet" href="assets/css/account.css?v=2">
+</head>
+<body class="account-page">
+  <div class="bg-scene" aria-hidden="true">
+    <canvas id="particles" class="bg-particles"></canvas>
+    <div class="orb orb-a"></div>
+    <div class="orb orb-b"></div>
+    <div class="bg-grid"></div>
+    <div class="bg-noise"></div>
+  </div>
+
+  <header class="site-header" id="siteHeader">
+    <div class="container header-inner">
+      <a href="/" class="logo" aria-label="LASTBOT — на главную">
+        <svg class="logo-mark" viewBox="0 0 64 64" aria-hidden="true">
+          <path d="M32 4l24 14v28L32 60 8 46V18z" fill="none" stroke="url(#lgd)" stroke-width="4"/>
+          <path d="M32 20a12 12 0 1 0 0 24 12 12 0 0 0 0-24zm0 7a5 5 0 1 1 0 10 5 5 0 0 1 0-10z" fill="url(#lgd)"/>
+          <defs><linearGradient id="lgd" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#22d3ee"/><stop offset="1" stop-color="#8b5cf6"/>
+          </linearGradient></defs>
+        </svg>
+        <span class="logo-word">LAST<span class="logo-accent">BOT</span></span>
+      </a>
+      <div class="header-cta">
+        <button class="theme-toggle" id="themeToggle" type="button" aria-label="Светлая тема">
+          <svg class="ico-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A8.5 8.5 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <svg class="ico-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.6 4.6l1.8 1.8M17.6 17.6l1.8 1.8M19.4 4.6l-1.8 1.8M6.4 17.6l-1.8 1.8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        </button>
+        <div class="lang-switch" id="langSwitch">
+          <button class="lang-btn" id="langBtn" type="button" aria-haspopup="listbox" aria-expanded="false" aria-label="Выбор языка">
+            <svg class="lang-globe" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3 12h18M12 3c3 3.5 3 14.5 0 18M12 3c-3 3.5-3 14.5 0 18" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+            <span id="langCurrent">RU</span>
+            <svg class="lang-caret" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10l5 5 5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </button>
+          <ul class="lang-menu" id="langMenu" role="listbox" aria-label="Языки" hidden>
+            <li role="option" data-lang="ru">Русский</li>
+            <li role="option" data-lang="en">English</li>
+            <li role="option" data-lang="es">Español</li>
+            <li role="option" data-lang="de">Deutsch</li>
+            <li role="option" data-lang="fr">Français</li>
+            <li role="option" data-lang="pt">Português</li>
+            <li role="option" data-lang="zh">中文</li>
+            <li role="option" data-lang="ar">العربية</li>
+          </ul>
+        </div>
+        <a href="/" class="btn btn-ghost btn-sm">← На сайт</a>
+      </div>
+    </div>
+  </header>
+
+  <main id="main" class="account-main">
+    <div class="container">
+
+      <!-- ======= Вход / регистрация ======= -->
+      <section class="acc-auth" id="authView">
+        <div class="section-head reveal">
+          <span class="section-tag">// account</span>
+          <h1 class="acc-title" data-ui="accountTitle">Кабинет альянса</h1>
+          <p data-ui="authWelcome">Личный кабинет для лидеров альянсов</p>
+          <p class="acc-sub" data-ui="authSub">Баланс бото-месяцев, кэшбэк и реферальная программа — в одном месте.</p>
+        </div>
+
+        <div class="acc-card acc-auth-card glass-card reveal" id="loginCard">
+            <h2 data-ui="signInTab">Вход</h2>
+            <form id="loginForm" novalidate>
+              <label class="fld">
+                <span data-ui="emailLabel">Email</span>
+                <input id="loginEmail" type="email" required autocomplete="email">
+              </label>
+              <label class="fld">
+                <span data-ui="passwordLabel">Пароль</span>
+                <input id="loginPassword" type="password" required autocomplete="current-password" minlength="8">
+              </label>
+              <p class="acc-error" id="loginError" role="alert" hidden></p>
+              <button class="btn btn-primary btn-block" type="submit" data-ui="signInBtn">Войти</button>
+            </form>
+            <button class="acc-switch" type="button" id="showRegisterBtn" data-ui="noAccountLink">Нет аккаунта? Зарегистрироваться</button>
+          </div>
+
+          <div class="acc-card acc-auth-card glass-card reveal" id="registerCard" hidden>
+            <h2 data-ui="signUpTab">Регистрация</h2>
+            <form id="registerForm" novalidate>
+              <label class="fld">
+                <span data-ui="emailLabel">Email</span>
+                <input id="regEmail" type="email" required autocomplete="email">
+              </label>
+              <label class="fld">
+                <span data-ui="passwordLabel">Пароль</span>
+                <input id="regPassword" type="password" required autocomplete="new-password" minlength="8">
+              </label>
+              <label class="fld">
+                <span data-ui="allianceNameLabel">Название альянса</span>
+                <input id="regAlliance" type="text" required maxlength="100">
+              </label>
+              <label class="fld">
+                <span data-ui="referralCodeLabel">Реферальный код (если есть)</span>
+                <input id="regReferral" type="text" maxlength="64" autocomplete="off" style="text-transform: uppercase" placeholder="XXXXXXXX">
+                <span class="acc-hint" data-ui="referralCodeHint">Код альянса, который вас пригласил</span>
+              </label>
+              <p class="acc-error" id="registerError" role="alert" hidden></p>
+              <p class="acc-success" id="registerSuccess" hidden></p>
+              <button class="btn btn-primary btn-block" type="submit" data-ui="signUpBtn">Создать аккаунт</button>
+            </form>
+            <button class="acc-switch" type="button" id="showLoginBtn" data-ui="haveAccountLink">Уже есть аккаунт? Войти</button>
+          </div>
+      </section>
+
+      <!-- ======= Дашборд альянса ======= -->
+      <section class="acc-board" id="accountView" hidden>
+        <div class="acc-top glass-card reveal">
+          <div>
+            <h1 class="acc-title" data-ui="accountTitle">Кабинет альянса</h1>
+            <p class="acc-greeting" id="accGreeting"></p>
+          </div>
+          <button class="btn btn-ghost btn-sm" id="logoutBtn" type="button" data-ui="logoutBtn">Выйти</button>
+        </div>
+
+        <!-- Реферальная программа (выделенный блок) -->
+        <div class="acc-referral glass-card reveal">
+          <div class="acc-referral-head">
+            <div class="card-icon icon-violet" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M20 12v9H4v-9M2 7h20v5H2zM12 22V7M12 7s-1.5-4-4.5-4.5C5 2 4.5 3.5 5 5c.6 1.8 3 2.5 7 2.5s6.4-.7 7-2.5c.5-1.5 0-3-2.5-2.5C13.5 3 12 7 12 7z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+            <div>
+              <h2 data-ui="referralBlockTitle">Реферальная программа</h2>
+              <p data-ui="referralBlockDesc">Приведи другой альянс — получай их ботов на месяц бесплатно и 10% от суммы их покупки.</p>
+            </div>
+          </div>
+
+          <div class="acc-referral-main">
+            <div class="acc-code-box">
+              <span data-ui="myReferralCode">Твой реферальный код</span>
+              <button class="acc-code" id="accReferralCode" type="button" title="Скопировать">—</button>
+            </div>
+            <div class="acc-code-box">
+              <span data-ui="inviteLink">Ссылка для приглашения</span>
+              <div class="acc-link-row">
+                <code id="accInviteLink">—</code>
+                <button class="btn btn-ghost btn-sm" id="copyInviteBtn" type="button" data-ui="copyLinkBtn">Копировать ссылку</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="acc-referral-stats">
+            <div><span data-ui="referredCount">Приведено альянсов</span><strong id="accReferredCount">0</strong></div>
+            <div><span data-ui="earnedMonths">Заработано бото-месяцев</span><strong id="accEarnedMonths">0</strong></div>
+            <div><span data-ui="earnedCashback">Заработано кэшбэком</span><strong id="accEarnedCashback">$0.00</strong></div>
+          </div>
+
+          <div class="acc-table-wrap">
+            <table class="acc-table">
+              <thead>
+                <tr>
+                  <th data-ui="allianceNameLabel">Альянс</th><th>Дата</th><th>Ботов</th><th>Бонус (мес.)</th><th>Кэшбэк</th>
+                </tr>
+              </thead>
+              <tbody id="accReferralsBody"></tbody>
+            </table>
+            <p class="acc-empty" id="accReferralsEmpty" data-ui="noReferrals" hidden>Пока нет приведённых альянсов</p>
+          </div>
+        </div>
+
+        <!-- Мои бонусы -->
+        <div class="acc-cards">
+          <div class="acc-card acc-bonus glass-card reveal">
+            <span class="acc-card-label" data-ui="bonusMonthsLabel">Бонусные бото-месяцы</span>
+            <strong class="acc-card-value" id="accBonusMonths">0</strong>
+          </div>
+          <div class="acc-card acc-bonus glass-card reveal">
+            <span class="acc-card-label" data-ui="cashbackLabel">Денежный кэшбэк</span>
+            <strong class="acc-card-value" id="accCashback">$0.00</strong>
+          </div>
+        </div>
+
+        <!-- История покупок -->
+        <div class="acc-section glass-card reveal">
+          <h2 data-ui="purchaseHistory">История покупок</h2>
+          <div class="acc-table-wrap">
+            <table class="acc-table">
+              <thead>
+                <tr>
+                  <th>Дата</th><th>Ботов</th><th>Срок</th><th>Сумма</th><th>Кэшбэк</th>
+                </tr>
+              </thead>
+              <tbody id="accPurchasesBody"></tbody>
+            </table>
+            <p class="acc-empty" id="accPurchasesEmpty" data-ui="emptyHistory" hidden>Покупок пока нет</p>
+          </div>
+        </div>
+
+        <!-- Применить бонусы -->
+        <div class="acc-section glass-card reveal">
+          <h2 data-ui="applyBonusTitle">Применить бонусы к новой покупке</h2>
+          <p class="acc-sub" data-ui="applyBonusDesc">Собери заявку — менеджер подтвердит и спишет бонусные бото-месяцы.</p>
+          <form id="applyBonusForm" class="acc-form" novalidate>
+            <label class="fld">
+              <span data-ui="botsCountLabel">Количество ботов</span>
+              <input id="applyBots" type="number" min="1" max="30" value="5" required>
+            </label>
+            <label class="fld">
+              <span data-ui="monthsLabel">Срок (месяцев)</span>
+              <select id="applyMonths">
+                <option value="1">1</option>
+                <option value="3">3</option>
+                <option value="6">6</option>
+                <option value="12">12</option>
+              </select>
+            </label>
+            <label class="acc-check">
+              <input type="checkbox" id="applyUseBonus" checked>
+              <span data-ui="useBonusCheckbox">Использовать бонусные бото-месяцы</span>
+            </label>
+            <p class="acc-hint" id="applyBonusHint"></p>
+            <p class="acc-error" id="applyError" role="alert" hidden></p>
+            <p class="acc-success" id="applySuccess" hidden></p>
+            <button class="btn btn-primary" type="submit" data-ui="applyBonusSubmit">Отправить заявку менеджеру</button>
+          </form>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-bottom">
+      <p>© <span id="year">2026</span> LASTBOT.</p>
+    </div>
+  </footer>
+
+  <script src="assets/js/i18n.js?v=12" defer></script>
+  <script src="assets/js/account.js?v=3" defer></script>
+</body>
+</html>
