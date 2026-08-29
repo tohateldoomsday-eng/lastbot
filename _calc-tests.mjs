@@ -86,23 +86,25 @@ function makeCalc(data) {
   function renderPrice(bots, months) {
     const perBot = pricePerBotFor(bots);
     const period = periodFor(months);
-    const base = 2.0 * bots * period.coef;
-    let total = perBot * bots * period.coef;
+    const prePromo = perBot * bots * period.coef;
+    const base = 2.0 * bots * months;
+    let total = prePromo;
     let oldPrice = null;
+    let promoOff = 0;
     const promo = promoFor(months, bots)[0];
     if (promo) {
       if (promo.type === "percent") {
         const v = parseFloat(promo.value) || 0;
-        if (v > 0) { oldPrice = total; total = total * (1 - v / 100); }
+        if (v > 0) { oldPrice = prePromo; total = prePromo * (1 - v / 100); promoOff = prePromo - total; }
       } else if (promo.type === "fixed") {
         const v = parseFloat(promo.value) || 0;
-        if (v > 0) { oldPrice = total; total = Math.max(0, total - v); }
+        if (v > 0) { oldPrice = prePromo; total = Math.max(0, prePromo - v); promoOff = prePromo - total; }
       }
     }
     let out, rub, threw = null;
     try { out = fmtUsd(total); } catch (e) { threw = e.message; out = "THROW: " + e.message; }
     try { rub = fmtRub(total, pricingData.rate); } catch (e) { threw = (threw || "") + " | rub: " + e.message; }
-    return { perBot, coef: period.coef, base, total, oldPrice, promo: promo && promo.name, out, rub, threw };
+    return { perBot, coef: period.coef, prePromo, base, total, oldPrice, promoOff, save: Math.max(0, base - prePromo), promo: promo && promo.name, out, rub, threw };
   }
   return { pricingData, renderPrice, promoFor, periodFor, pricePerBotFor };
 }
@@ -173,14 +175,35 @@ await runScenario("0. база: точные значения", {
   expect: (bots, months, r) => {
     const expPerBot = bots <= 10 ? 2 : bots <= 20 ? 1.8 : 1.5;
     const expCoef = { 1: 1, 2: 2, 3: 2.5, 6: 5, 12: 9 }[months]; // 2 — вне данных → линейный fallback
-    const base = expPerBot * bots * expCoef;
+    const pre = expPerBot * bots * expCoef;
     const promo = months === 1; // p1: −30% на 1 месяц
-    const expTotal = promo ? base * 0.7 : base;
+    const expTotal = promo ? pre * 0.7 : pre;
+    const expSave = 2.0 * bots * months - pre; // экономия без акции
     if (Math.abs(r.total - expTotal) > 1e-9) return `ожидалось ${expTotal}, получено ${r.total}`;
     if (Math.abs(r.perBot - expPerBot) > 1e-9) return `perBot ожидался ${expPerBot}, получен ${r.perBot}`;
+    if (Math.abs(r.save - expSave) > 1e-9) return `экономия ожидалась ${expSave}, получена ${r.save}`;
     return null;
   },
 });
+
+/* E. Экономия (без акции) должна монотонно расти со сроком для любого числа ботов */
+{
+  fs.writeFileSync(path.join(DATA, "content.json"), JSON.stringify({ schemaVersion: 2, ...baseContent }));
+  fs.writeFileSync(path.join(DATA, "promotions.json"), JSON.stringify(basePromos));
+  const data = await (await fetch(`http://127.0.0.1:${PORT}/api/pricing`)).json();
+  const calc = makeCalc(data);
+  let bad = null;
+  for (const bots of BOTS) {
+    let prev = -1;
+    for (const months of MONTHS) {
+      const r = calc.renderPrice(bots, months);
+      if (r.save < prev - 1e-9) { bad = `bots=${bots}: экономия упала ${prev.toFixed(2)} → ${r.save.toFixed(2)} (срок ${months} мес)`; break; }
+      prev = r.save;
+    }
+    if (bad) break;
+  }
+  report("E1. экономия монотонно растёт со сроком", bad ? "fail" : "pass", bad || "");
+}
 
 /* A. botPrices */
 await runScenario("A1. price строкой «1.9»", { content: { pricing: { ...baseContent.pricing, botPrices: baseContent.pricing.botPrices.map((t, i) => i === 1 ? { ...t, price: "1.9" } : t) } }, promotions: basePromos });

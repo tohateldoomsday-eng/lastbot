@@ -1700,6 +1700,7 @@ html.light .period-badge { color: #ffffff; }
 .calc-rub { font-family: var(--font-mono); font-size: 17px; font-weight: 600; color: var(--amber); }
 .calc-save { font-size: 14px; color: var(--text-dim); }
 .calc-save strong { color: var(--green-acid); font-family: var(--font-mono); font-size: 16px; }
+.calc-promo-save { margin-left: 10px; color: var(--cyan); font-family: var(--font-mono); font-size: 14px; }
 .calc-cashback { font-size: 13px; color: var(--text-faint); }
 .calc-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 14px; }
 

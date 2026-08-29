@@ -1031,9 +1031,14 @@
     const bots = parseInt(botsRange.value, 10);
     const perBot = pricePerBotFor(bots);
     const period = periodFor(currentMonths);
-    const base = 2.0 * bots * period.coef; // базовая цена без прогрессивной скидки
-    let total = perBot * bots * period.coef;
+    /* Цена со скидками за объём и срок (без акции) */
+    const prePromo = perBot * bots * period.coef;
+    /* База: тот же пакет помесячно по базовому тарифу $2/бот —
+       экономия растёт с количеством ботов и сроком */
+    const base = 2.0 * bots * currentMonths;
+    let total = prePromo;
     let oldPrice = null;
+    let promoOff = 0;
     const promo = promoFor(currentMonths, bots)[0];
 
     calcBotsVal.textContent = bots;
@@ -1047,10 +1052,10 @@
       promoBanner.hidden = false;
       if (promo.type === "percent") {
         const v = parseFloat(promo.value) || 0;
-        if (v > 0) { oldPrice = total; total = total * (1 - v / 100); }
+        if (v > 0) { oldPrice = prePromo; total = prePromo * (1 - v / 100); promoOff = prePromo - total; }
       } else if (promo.type === "fixed") {
         const v = parseFloat(promo.value) || 0;
-        if (v > 0) { oldPrice = total; total = Math.max(0, total - v); }
+        if (v > 0) { oldPrice = prePromo; total = Math.max(0, prePromo - v); promoOff = prePromo - total; }
       }
       /* bots-gift: скидка к цене не применяется, только баннер */
     } else if (promoBanner) {
@@ -1061,9 +1066,20 @@
       calcUsd.innerHTML = (oldPrice != null ? '<s class="calc-old">' + fmtUsd(oldPrice) + "</s> " : "") + fmtUsd(total);
     }
     if (calcRub) calcRub.textContent = fmtRub(Math.round((total * pricingData.rate) / 100) * 100);
-    const save = Math.max(0, base - total);
+    /* Экономия: объём + срок, БЕЗ акции (акция — отдельной строкой),
+       чтобы сумма росла со сроком и не путалась */
+    const save = Math.max(0, base - prePromo);
     if (calcSaveVal) calcSaveVal.textContent = fmtUsd(save);
     if (calcSaveBox) calcSaveBox.hidden = save <= 0;
+    const promoLine = $("#calcPromoSave");
+    if (promoLine) {
+      if (promoOff > 0) {
+        promoLine.textContent = (tUI("calcPromoSave") || "ещё по акции −") + fmtUsd(promoOff);
+        promoLine.hidden = false;
+      } else {
+        promoLine.hidden = true;
+      }
+    }
   }
 
   /* Кнопки сроков подписки — строим из данных /api/pricing, чтобы
