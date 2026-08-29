@@ -71,8 +71,7 @@
           path: "pricing.periods", label: "Сроки подписки", type: "objects",
           spec: [
             { key: "months", label: "Месяцев", type: "number" },
-            { key: "coef", label: "Коэффициент", type: "number" },
-            { key: "discount", label: "Скидка, %", type: "number" },
+            { key: "discount", label: "Скидка, % (цена = срок × (1 − скидка/100))", type: "number" },
           ],
         },
       ],

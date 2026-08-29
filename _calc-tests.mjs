@@ -36,10 +36,10 @@ const PRICING_DEFAULTS = {
     { min: 21, max: 30, price: 1.5 },
   ],
   periods: [
-    { months: 1, coef: 1.0, discount: 0 },
-    { months: 3, coef: 2.5, discount: 17 },
-    { months: 6, coef: 5.0, discount: 17 },
-    { months: 12, coef: 9.0, discount: 25 },
+    { months: 1, discount: 0 },
+    { months: 3, discount: 17 },
+    { months: 6, discount: 17 },
+    { months: 12, discount: 25 },
   ],
   rate: 85,
   promotions: [],
@@ -60,8 +60,9 @@ function makeCalc(data) {
     const list = pricingData.periods || [];
     const found = list.find((p) => Number(p.months) === months);
     if (found) {
-      const coef = parseFloat(found.coef);
-      return { months: Number(found.months), coef: isFinite(coef) ? coef : months, discount: parseFloat(found.discount) || 0 };
+      const discount = Math.min(100, Math.max(0, parseFloat(found.discount) || 0));
+      const coef = Math.round(Number(found.months) * (1 - discount / 100) * 100) / 100;
+      return { months: Number(found.months), coef, discount };
     }
     return { months, coef: months, discount: 0 };
   }
@@ -174,7 +175,8 @@ await runScenario("0. база: точные значения", {
   content: baseContent, promotions: basePromos,
   expect: (bots, months, r) => {
     const expPerBot = bots <= 10 ? 2 : bots <= 20 ? 1.8 : 1.5;
-    const expCoef = { 1: 1, 2: 2, 3: 2.5, 6: 5, 12: 9 }[months]; // 2 — вне данных → линейный fallback
+    /* коэффиент теперь считается из скидки: срок × (1 − discount/100) */
+    const expCoef = { 1: 1, 2: 2, 3: 2.49, 6: 4.98, 12: 9 }[months]; // 2 — вне данных → линейный fallback
     const pre = expPerBot * bots * expCoef;
     const promo = months === 1; // p1: −30% на 1 месяц
     const expTotal = promo ? pre * 0.7 : pre;
@@ -229,26 +231,27 @@ await runScenario("A11. все диапазоны выше 30", { content: { pri
 /* B. periods */
 const perB = (patch, i) => baseContent.pricing.periods.map((p, idx) => (idx === i ? { ...p, ...patch } : p));
 await runScenario("B1. months строкой «3»", { content: { pricing: { ...baseContent.pricing, periods: perB({ months: "3" }, 1) } }, promotions: basePromos });
-await runScenario("B2. coef строкой «2.5»", { content: { pricing: { ...baseContent.pricing, periods: perB({ coef: "2.5" }, 1) } }, promotions: basePromos });
-await runScenario("B3. coef = 0", { content: { pricing: { ...baseContent.pricing, periods: perB({ coef: 0 }, 1) } }, promotions: basePromos,
-  expect: (bots, months, r) => months === 3 && Math.abs(r.total) > 1e-9 ? "coef 0 должен давать total 0" : null });
-await runScenario("B4. coef = «abc»", { content: { pricing: { ...baseContent.pricing, periods: perB({ coef: "abc" }, 1) } }, promotions: basePromos,
-  warnIf: () => "нечисловой coef → fallback coef=месяцы" });
-await runScenario("B5. discount строкой «10»", { content: { pricing: { ...baseContent.pricing, periods: perB({ discount: "10" }, 1) } }, promotions: basePromos,
-  warnIf: () => "discount только бейдж, на цену не влияет" });
-await runScenario("B6. discount = 0", { content: { pricing: { ...baseContent.pricing, periods: perB({ discount: 0 }, 1) } }, promotions: basePromos,
-  warnIf: () => "бейдж скрыт (discount 0)" });
+await runScenario("B2. coef строкой «2.5» (поле игнорируется)", { content: { pricing: { ...baseContent.pricing, periods: perB({ coef: "2.5" }, 1) } }, promotions: basePromos,
+  expect: (bots, months, r) => months === 3 && Math.abs(r.coef - 2.49) > 1e-9 ? "coef должен считаться из скидки 17%: 2.49, получено " + r.coef : null });
+await runScenario("B3. coef = 0 (поле игнорируется)", { content: { pricing: { ...baseContent.pricing, periods: perB({ coef: 0 }, 1) } }, promotions: basePromos,
+  expect: (bots, months, r) => months === 3 && Math.abs(r.coef - 2.49) > 1e-9 ? "coef должен считаться из скидки 17%: 2.49, получено " + r.coef : null });
+await runScenario("B4. coef = «abc» (поле игнорируется)", { content: { pricing: { ...baseContent.pricing, periods: perB({ coef: "abc" }, 1) } }, promotions: basePromos,
+  expect: (bots, months, r) => months === 3 && Math.abs(r.coef - 2.49) > 1e-9 ? "coef должен считаться из скидки 17%: 2.49, получено " + r.coef : null });
+await runScenario("B5. discount строкой «10» — скидка управляет ценой", { content: { pricing: { ...baseContent.pricing, periods: perB({ discount: "10" }, 1) } }, promotions: basePromos,
+  expect: (bots, months, r) => months === 3 && Math.abs(r.coef - 2.7) > 1e-9 ? "скидка 10% должна давать coef 2.7, получено " + r.coef : null });
+await runScenario("B6. discount = 0 — цена без скидки за срок", { content: { pricing: { ...baseContent.pricing, periods: perB({ discount: 0 }, 1) } }, promotions: basePromos,
+  expect: (bots, months, r) => months === 3 && Math.abs(r.coef - 3) > 1e-9 ? "скидка 0% должна давать coef 3, получено " + r.coef : null });
+await runScenario("B6b. discount = 100 — бесплатный срок", { content: { pricing: { ...baseContent.pricing, periods: perB({ discount: 100 }, 1) } }, promotions: basePromos,
+  expect: (bots, months, r) => months === 3 && Math.abs(r.total) > 1e-9 ? "скидка 100% должна давать total 0" : null });
 await runScenario("B7. months=2 вместо 3 (кнопки строятся из данных)", { content: { pricing: { ...baseContent.pricing, periods: perB({ months: 2 }, 1) } }, promotions: basePromos,
   expect: (bots, months, r) => {
-    const c = r.coef;
-    const exp = months === 2 ? 2.5 : [1, 2.5, 5, 9][[1, 3, 6, 12].indexOf(months)];
-    if (months === 2 && Math.abs(c - 2.5) > 1e-9) return "период months=2 должен иметь coef 2.5, получено " + c;
+    if (months === 2 && Math.abs(r.coef - 1.66) > 1e-9) return "период months=2 со скидкой 17% должен иметь coef 1.66, получено " + r.coef;
     return null;
   } });
 await runScenario("B8. periods = []", { content: { pricing: { ...baseContent.pricing, periods: [] } }, promotions: basePromos,
-  expect: (bots, months, r) => { const exp = { 1: 1, 2: 2, 3: 2.5, 6: 5, 12: 9 }[months]; return Math.abs(r.coef - exp) > 1e-9 ? "сервер должен вернуть DEFAULTS при пустом массиве, coef=" + r.coef + " ожид. " + exp : null; } });
+  expect: (bots, months, r) => { const exp = { 1: 1, 2: 2, 3: 2.49, 6: 4.98, 12: 9 }[months]; return Math.abs(r.coef - exp) > 1e-9 ? "сервер должен вернуть DEFAULTS при пустом массиве, coef=" + r.coef + " ожид. " + exp : null; } });
 await runScenario("B9. periods отсутствует", { content: { pricing: { heading: "t", sub: "t", note: "t", botPrices: baseContent.pricing.botPrices } }, promotions: basePromos,
-  expect: (bots, months, r) => { const exp = { 1: 1, 2: 2, 3: 2.5, 6: 5, 12: 9 }[months]; return Math.abs(r.coef - exp) > 1e-9 ? "сервер должен вернуть DEFAULTS, coef=" + r.coef + " ожид. " + exp : null; } });
+  expect: (bots, months, r) => { const exp = { 1: 1, 2: 2, 3: 2.49, 6: 4.98, 12: 9 }[months]; return Math.abs(r.coef - exp) > 1e-9 ? "сервер должен вернуть DEFAULTS, coef=" + r.coef + " ожид. " + exp : null; } });
 
 /* C. promotions */
 const promoBase = () => JSON.parse(JSON.stringify(basePromos));

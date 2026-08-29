@@ -964,10 +964,10 @@
       { min: 21, max: 30, price: 1.5 },
     ],
     periods: [
-      { months: 1, coef: 1.0, discount: 0 },
-      { months: 3, coef: 2.5, discount: 17 },
-      { months: 6, coef: 5.0, discount: 17 },
-      { months: 12, coef: 9.0, discount: 25 },
+      { months: 1, discount: 0 },
+      { months: 3, discount: 17 },
+      { months: 6, discount: 17 },
+      { months: 12, discount: 25 },
     ],
     rate: RUB_RATE,
     promotions: [],
@@ -1001,8 +1001,10 @@
     const list = pricingData.periods || [];
     const found = list.find((p) => Number(p.months) === months);
     if (found) {
-      const coef = parseFloat(found.coef);
-      return { months: Number(found.months), coef: isFinite(coef) ? coef : months, discount: parseFloat(found.discount) || 0 };
+      const discount = Math.min(100, Math.max(0, parseFloat(found.discount) || 0));
+      /* Коэффициент считается из скидки: цена = срок × (1 − скидка/100) */
+      const coef = Math.round(Number(found.months) * (1 - discount / 100) * 100) / 100;
+      return { months: Number(found.months), coef, discount };
     }
     return { months, coef: months, discount: 0 };
   }

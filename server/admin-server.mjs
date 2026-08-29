@@ -1019,7 +1019,15 @@ const server = http.createServer(async (req, res) => {
         .filter(Boolean);
       const rawPeriods = (content.pricing && content.pricing.periods) || DEFAULTS.pricing.periods;
       const periods = (Array.isArray(rawPeriods) && rawPeriods.length ? rawPeriods : DEFAULTS.pricing.periods)
-        .map((pr) => (pr ? { months: toInt(pr.months, 0), coef: toFloat(pr.coef, 0), discount: toFloat(pr.discount, 0) } : null))
+        .map((pr) => {
+          if (!pr) return null;
+          const months = toInt(pr.months, 0);
+          if (!months) return null;
+          const discount = Math.min(100, Math.max(0, toFloat(pr.discount, 0)));
+          /* Коэффициент считается из скидки: цена = срок × (1 − скидка/100) */
+          const coef = Math.round(months * (1 - discount / 100) * 100) / 100;
+          return { months, coef, discount };
+        })
         .filter(Boolean);
       json(res, 200, {
         ok: true,
