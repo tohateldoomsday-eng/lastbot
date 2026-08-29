@@ -554,6 +554,32 @@ function trialRateLimitOk(ip) {
   return rec.count <= MAX;
 }
 
+/* Rate-limit публичного дашборда: 60 запросов за 10 минут с одного IP */
+const dashAttempts = new Map();
+function dashRateLimitOk(ip) {
+  const now = Date.now();
+  const WINDOW = 10 * 60 * 1000;
+  const MAX = 60;
+  const rec = dashAttempts.get(ip);
+  if (!rec || now - rec.first > WINDOW) {
+    dashAttempts.set(ip, { first: now, count: 1 });
+    return true;
+  }
+  rec.count++;
+  return rec.count <= MAX;
+}
+
+/* Периодическая чистка rate-limit карт, чтобы память не росла бесконечно */
+function pruneRateLimits() {
+  const now = Date.now();
+  for (const map of [loginAttempts, clientLoginAttempts, regAttempts, trialAttempts, dashAttempts]) {
+    for (const [k, v] of map) {
+      if (!v || now - v.first > 60 * 60 * 1000) map.delete(k);
+    }
+  }
+}
+setInterval(pruneRateLimits, 30 * 60 * 1000);
+
 /* ---------- HTTP ---------- */
 const MIME = {
   ".html": "text/html; charset=utf-8",
@@ -644,6 +670,14 @@ function ensureReferralCode(allianceName) {
 }
 
 /* ---------- Акции ---------- */
+function promoEndTs(pr) {
+  const raw = pr && pr.endDate;
+  if (!raw) return Infinity;
+  const s = String(raw);
+  const t = s.includes("T") ? Date.parse(s) : Date.parse(s + "T23:59:59");
+  return isNaN(t) ? Infinity : t;
+}
+
 function activePromotions(now = Date.now()) {
   const list = readJson(PROMOTIONS_FILE, []);
   if (!Array.isArray(list)) return [];
@@ -651,8 +685,7 @@ function activePromotions(now = Date.now()) {
     if (!pr || pr.type === undefined) return false;
     if (pr.usageLimit != null && (pr.used || 0) >= pr.usageLimit) return false;
     const start = pr.startDate ? new Date(pr.startDate).getTime() : 0;
-    const end = pr.endDate ? new Date(pr.endDate + "T23:59:59").getTime() : Infinity;
-    return now >= start && now <= end;
+    return now >= start && now <= promoEndTs(pr);
   });
 }
 
@@ -687,9 +720,25 @@ function applyPurchase({ allianceCode, allianceName, botsCount, periodMonths, to
   };
   if (cleanStr(allianceName)) entry.name = cleanStr(allianceName);
 
-  /* 1.4 Кэшбэк: 10% от числа купленных ботов в виде бото-месяцев */
-  const cashbackMonths = Math.round(botsCount * (CASHBACK_PERCENT / 100));
+  /* 1.4 Кэшбэк: 10% от объёма покупки (боты × месяцы), минимум 1 месяц */
+  const cashbackMonths = Math.max(1, Math.round(botsCount * periodMonths * (CASHBACK_PERCENT / 100)));
   entry.bonusMonths += cashbackMonths;
+
+  /* Акция bots-gift: +N ботов в подарок при покупке от minBots */
+  let giftBots = 0;
+  const giftPromo = activePromotions().find((pr) => pr.type === "bots-gift" && (pr.minBots == null || botsCount >= pr.minBots) && (pr.maxBots == null || botsCount <= pr.maxBots));
+  if (giftPromo) {
+    giftBots = toInt(giftPromo.value, 0);
+    if (giftBots > 0) {
+      entry.bonusMonths += giftBots;
+      const promos = readJson(PROMOTIONS_FILE, []);
+      const idx = promos.findIndex((p) => p && p.id === giftPromo.id);
+      if (idx > -1) {
+        promos[idx] = { ...promos[idx], used: (promos[idx].used || 0) + 1 };
+        writeJson(PROMOTIONS_FILE, promos);
+      }
+    }
+  }
 
   const purchase = {
     ts: Date.now(),
@@ -698,6 +747,7 @@ function applyPurchase({ allianceCode, allianceName, botsCount, periodMonths, to
     months: periodMonths,
     priceUsd: totalPriceUsd,
     cashbackMonths,
+    giftBots,
     referralCode: referralCode || null,
   };
   entry.purchases.push(purchase);
@@ -739,7 +789,7 @@ function applyPurchase({ allianceCode, allianceName, botsCount, periodMonths, to
   balances[allianceCode] = entry;
   writeJson(BALANCES_FILE, balances);
   writeJson(REFERRALS_FILE, refs);
-  return { cashbackMonths, referralAward, purchase };
+  return { cashbackMonths, giftBots, referralAward, purchase };
 }
 
 /* ============================================================
@@ -904,25 +954,28 @@ const server = http.createServer(async (req, res) => {
         return;
       }
       const trials = readJson(TRIALS_FILE, []);
+      // Автоматически выдаём альянсу реферальный код (п.1.3)
+      const referralCode = ensureReferralCode(allianceName);
       trials.push({
         id: randomBytes(8).toString("hex"),
         allianceName,
         leaderName,
         contactTelegram,
+        referralCode,
         ts: Date.now(),
         date: new Date().toISOString(),
       });
       writeJson(TRIALS_FILE, trials);
-      // Автоматически выдаём альянсу реферальный код (п.1.3)
-      const referralCode = ensureReferralCode(allianceName);
       // Уведомление менеджеру в Telegram (не блокирует ответ)
       telegramBot.sendMessage("🆕 Заявка на триал\nАльянс: " + allianceName + "\nЛидер: " + leaderName + "\nTelegram: " + contactTelegram + "\nРеф-код: " + referralCode).catch(() => {});
       json(res, 200, { ok: true, referralCode, trialDays: TRIAL_DAYS, trialBots: TRIAL_BOTS });
       return;
     }
 
-    /* 1.9 Дашборд альянса по коду */
+    /* 1.9 Дашборд альянса по коду (публично, с rate-limit) */
     if (p === "/api/dashboard" && req.method === "GET") {
+      const ip = req.socket.remoteAddress || "?";
+      if (!dashRateLimitOk(ip)) { json(res, 429, { ok: false, error: "Слишком много запросов, попробуйте позже" }); return; }
       const code = cleanStr(url.searchParams.get("code"), 64).toUpperCase();
       if (!code) { json(res, 400, { ok: false, error: "Укажите код" }); return; }
       const refs = readJson(REFERRALS_FILE, { codes: {}, links: [] });
@@ -969,23 +1022,10 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
-    /* 1.5 Активные промокоды с учётом условий (публично) */
-    if (p === "/api/promocodes/active" && req.method === "GET") {
-      const bots = toInt(url.searchParams.get("bots"), 0);
-      const content = loadContent();
-      const items = (content.codes && content.codes.items) || [];
-      const now = Date.now();
-      const active = items.filter((c) => {
-        if (!c) return false;
-        if (c.active === false || c.active === "false") return false;
-        if (c.expiresTs && toInt(c.expiresTs, 0) < now) return false;
-        if (c.minBots != null && bots < toInt(c.minBots, 0)) return false;
-        if (c.maxBots != null && bots > toInt(c.maxBots, 0)) return false;
-        return true;
-      });
-      json(res, 200, { ok: true, items: active });
-      return;
-    }
+    /* 1.5 Активные промокоды с учётом условий (публично)
+       Устарел: промокоды приходят в /api/content (content.codes.items),
+       а акции — в /api/pricing и /api/promotions. Эндпоинт удалён,
+       чтобы не плодить неиспользуемые пути. */
 
 
     /* ================= КЛИЕНТСКИЕ ЭНДПОИНТЫ (личный кабинет) ================= */
@@ -1232,6 +1272,35 @@ const server = http.createServer(async (req, res) => {
       json(res, 200, { ok: true });
       return;
     }
+    /* Решение по триалу: одобрить/отклонить + уведомление менеджеру */
+    if (p === "/api/trials/decide" && req.method === "POST") {
+      if (!originOk(req)) { json(res, 403, { ok: false, error: "bad origin" }); return; }
+      if (!isAuthed(req)) { json(res, 401, { ok: false, error: "Требуется вход" }); return; }
+      const body = JSON.parse((await readBody(req)) || "{}");
+      const id = cleanStr(body.id, 64);
+      const decision = cleanStr(body.decision, 20);
+      if (!id || (decision !== "approve" && decision !== "reject")) {
+        json(res, 400, { ok: false, error: "Неверные данные" });
+        return;
+      }
+      const trials = readJson(TRIALS_FILE, []);
+      const entry = trials.find((t) => t && t.id === id);
+      if (!entry || entry.status) {
+        json(res, 404, { ok: false, error: "Заявка не найдена или уже обработана" });
+        return;
+      }
+      entry.status = decision === "approve" ? "approved" : "rejected";
+      entry.decidedTs = Date.now();
+      writeJson(TRIALS_FILE, trials);
+      telegramBot.sendMessage(
+        (decision === "approve" ? "✅ Триал одобрен" : "❌ Триал отклонён") +
+        "\nАльянс: " + entry.allianceName + " (" + (entry.leaderName || "—") + ")" +
+        "\nTelegram: " + entry.contactTelegram +
+        "\nУсловия: " + TRIAL_DAYS + " дней × " + TRIAL_BOTS + " ботов"
+      ).catch(() => {});
+      json(res, 200, { ok: true, status: entry.status });
+      return;
+    }
 
     if (p === "/api/balances" && req.method === "GET") {
       if (!isAuthed(req)) { json(res, 401, { ok: false, error: "Требуется вход" }); return; }
@@ -1302,8 +1371,13 @@ const server = http.createServer(async (req, res) => {
         const balances = readJson(BALANCES_FILE, {});
         const bal = balances[reqEntry.allianceCode] || { name: reqEntry.allianceName, bonusMonths: 0, cashbackCents: 0, purchases: [], referrals: [] };
         if (reqEntry.useBonusMonths) {
-          const spend = Math.min(bal.bonusMonths || 0, reqEntry.botsCount * reqEntry.months);
-          bal.bonusMonths = (bal.bonusMonths || 0) - spend;
+          const need = reqEntry.botsCount * reqEntry.months;
+          const have = bal.bonusMonths || 0;
+          if (have < need) {
+            json(res, 400, { ok: false, error: "Недостаточно бонусов: нужно " + need + " мес., доступно " + have });
+            return;
+          }
+          bal.bonusMonths = have - need;
           bal.purchases.push({
             ts: Date.now(),
             date: new Date().toISOString().slice(0, 10),
@@ -1311,7 +1385,7 @@ const server = http.createServer(async (req, res) => {
             months: reqEntry.months,
             priceUsd: 0,
             cashbackMonths: 0,
-            bonusSpent: spend,
+            bonusSpent: need,
             type: "bonus-spend",
           });
         } else {

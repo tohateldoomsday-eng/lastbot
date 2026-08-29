@@ -169,6 +169,14 @@
   const registerCard = $("#registerCard");
   let currentProfile = null;
 
+  /* Слушатели копирования — один раз, иначе при каждой перерисовке
+     (смена языка) они дублировались. */
+  let inviteLink = "";
+  const copyInviteBtn = $("#copyInviteBtn");
+  if (copyInviteBtn) copyInviteBtn.addEventListener("click", () => copyText(inviteLink, copyInviteBtn, tUI("copyDone") || "Скопировано ✓"));
+  const codeBtn = $("#accReferralCode");
+  if (codeBtn) codeBtn.addEventListener("click", () => copyText(currentProfile && currentProfile.referralCode, codeBtn));
+
   function showAuth() {
     currentProfile = null;
     authView.hidden = false;
@@ -195,14 +203,10 @@
     $("#accCashback").textContent = fmtCash(profile.balance.cashbackCents);
 
     /* Реферальный блок */
-    const codeBtn = $("#accReferralCode");
-    codeBtn.textContent = profile.referralCode || "—";
-    codeBtn.addEventListener("click", () => copyText(profile.referralCode, codeBtn));
-
-    const invite = "https://lastbot.gg/?ref=" + (profile.referralCode || "");
-    $("#accInviteLink").textContent = invite;
-    const copyInviteBtn = $("#copyInviteBtn");
-    copyInviteBtn.addEventListener("click", () => copyText(invite, copyInviteBtn, tUI("copyDone") || "Скопировано ✓"));
+    if (codeBtn) codeBtn.textContent = profile.referralCode || "—";
+    inviteLink = "https://lastbot.gg/?ref=" + (profile.referralCode || "");
+    const inviteEl = $("#accInviteLink");
+    if (inviteEl) inviteEl.textContent = inviteLink;
 
     const referrals = profile.balance.referrals || [];
     $("#accReferredCount").textContent = referrals.length;
@@ -216,11 +220,12 @@
     ]));
 
     /* История покупок */
+    const mo = tUI("monthsShort") || "мес";
     const purchases = profile.balance.purchases || [];
     renderTable("accPurchasesBody", "accPurchasesEmpty", purchases.map((p) => [
       p.date || "—", p.bots || 0,
-      (p.months || 0) + " мес",
-      p.priceUsd > 0 ? "$" + p.priceUsd : (p.bonusSpent ? "бонусы −" + p.bonusSpent + " мес" : "—"),
+      (p.months || 0) + " " + mo,
+      p.priceUsd > 0 ? "$" + p.priceUsd : (p.bonusSpent ? (tUI("bonusSpentShort") || "бонусы −") + p.bonusSpent + " " + mo : "—"),
       "+" + (p.cashbackMonths || 0),
     ]));
 

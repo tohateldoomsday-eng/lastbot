@@ -117,6 +117,57 @@ check("referral/apply ok", res.status === 200 && rapply.ok === true, rapply);
 balances = await (await get("/api/balances", AH)).json();
 check("A bonusMonths=14 after apply", balances.balances[a.allianceCode].bonusMonths === 14, balances.balances[a.allianceCode]);
 
+// 13. trial flow: referralCode in record + decide approve/reject
+res = await post("/api/trial", { allianceName: "Trial Alliance", leaderName: "TL", contactTelegram: "@tl" });
+let trial = await res.json();
+check("trial created with referralCode", res.status === 200 && trial.ok && !!trial.referralCode, trial);
+let trials = await (await get("/api/trials", AH)).json();
+const tEntry = (trials.items || []).find((t) => t.allianceName === "Trial Alliance");
+check("trial record stores referralCode", !!tEntry && !!tEntry.referralCode, tEntry);
+res = await post("/api/trials/decide", { id: tEntry.id, decision: "approve" }, AH);
+check("trial approve ok", res.status === 200 && (await res.json()).ok === true);
+res = await post("/api/trials/decide", { id: tEntry.id, decision: "reject" }, AH);
+check("trial decide twice → 404", res.status === 404);
+trials = await (await get("/api/trials", AH)).json();
+check("trial status=approved", ((trials.items || []).find((t) => t.id === tEntry.id) || {}).status === "approved");
+
+// 14. bots-gift: покупка 25 ботов активирует акцию +5 ботов, used=1
+res = await post("/api/purchase", { allianceCode: b.allianceCode, allianceName: "Alliance B", botsCount: 25, periodMonths: 3, totalPriceUsd: 90 }, AH);
+let p3 = await res.json();
+check("purchase#3 giftBots=5", res.status === 200 && p3.ok && p3.giftBots === 5, p3);
+check("purchase#3 cashback=8 (25×3×10%)", p3.cashbackMonths === 8, p3);
+const promos = await (await get("/api/promotions?all=1", AH)).json();
+const giftPromo = (promos.promotions || []).find((pr) => pr.id === "referral-gift");
+check("gift promo used incremented to 1", !!giftPromo && giftPromo.used === 1, giftPromo);
+
+// 15. защита от частичного списания: баланс 0, заявка на 10×3 с бонусами → approve 400
+res = await post("/api/register", { email: "c3@test.com", password: "password1", allianceName: "Poor Alliance" });
+let c3 = await res.json();
+check("register c3", res.status === 200 && c3.ok, c3);
+{
+  const r3 = await post("/api/login", { email: "c3@test.com", password: "password1" });
+  const ck3 = (r3.headers.getSetCookie ? r3.headers.getSetCookie() : []).map((x) => x.split(";")[0]).join("; ");
+  res = await post("/api/apply-bonus", { botsCount: 10, months: 3, useBonusMonths: true }, { "Content-Type": "application/json", Cookie: ck3 });
+  let ab = await res.json();
+  const reqs = await (await get("/api/bonus-requests", AH)).json();
+  const rq = (reqs.items || []).find((x) => x.id === ab.id);
+  res = await post("/api/bonus-requests/decide", { id: rq.id, decision: "approve" }, AH);
+  let dec = await res.json();
+  check("bonus approve with insufficient balance → 400", res.status === 400 && dec.ok === false, dec);
+}
+
+// 16. мёртвый эндпоинт удалён
+res = await get("/api/promocodes/active");
+check("promocodes/active removed → 404", res.status === 404);
+
+// 17. rate-limit дашборда (уже было несколько запросов; 60 на 10 минут)
+let got429 = false;
+for (let i = 0; i < 70; i++) {
+  const r = await get("/api/dashboard?code=ABCDEF" + i);
+  if (r.status === 429) { got429 = true; break; }
+}
+check("dashboard rate limit kicks in", got429);
+
 child.kill();
 fs.rmSync(DATA, { recursive: true, force: true });
 console.log("RESULT pass=" + pass + " fail=" + fail);

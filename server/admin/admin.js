@@ -779,7 +779,7 @@
       tbl.className = "data-table";
       const thead = document.createElement("thead");
       const trh = document.createElement("tr");
-      ["Дата", "Альянс", "Лидер", "Telegram", "Реф-код", ""].forEach((h) => {
+      ["Дата", "Альянс", "Лидер", "Telegram", "Реф-код", "Статус", "", ""].forEach((h) => {
         const th = document.createElement("th");
         th.textContent = h;
         trh.append(th);
@@ -789,16 +789,36 @@
       const tbody = document.createElement("tbody");
       trials.forEach((t, i) => {
         const tr = document.createElement("tr");
-        [t.date ? t.date.slice(0, 10) : "", t.allianceName, t.leaderName, t.contactTelegram, getReferralCodeLocal(t.allianceName)].forEach((v) => {
+        const status = t.status === "approved" ? "✓ одобрен" : t.status === "rejected" ? "✕ отклонён" : "новая";
+        [t.date ? t.date.slice(0, 10) : "", t.allianceName, t.leaderName, t.contactTelegram, t.referralCode || getReferralCodeLocal(t.allianceName), status].forEach((v) => {
           const td = document.createElement("td");
           td.textContent = v || "—";
           tr.append(td);
         });
+        /* Одобрить / отклонить (только новые заявки) */
+        const tdDecide = document.createElement("td");
+        if (!t.status) {
+          const ok = document.createElement("button");
+          ok.type = "button";
+          ok.className = "row-ok";
+          ok.textContent = "✓";
+          ok.title = "Одобрить";
+          ok.addEventListener("click", () => decideTrial(t.id, "approve"));
+          const no = document.createElement("button");
+          no.type = "button";
+          no.className = "row-del";
+          no.textContent = "✕";
+          no.title = "Отклонить";
+          no.addEventListener("click", () => decideTrial(t.id, "reject"));
+          tdDecide.append(ok, no);
+        }
+        tr.append(tdDecide);
         const tdDel = document.createElement("td");
         const del = document.createElement("button");
         del.type = "button";
         del.className = "row-del";
-        del.textContent = "✕";
+        del.textContent = "🗑";
+        del.title = "Удалить";
         del.addEventListener("click", () => {
           trials.splice(i, 1);
           saveTrials();
@@ -809,6 +829,22 @@
       });
       tbl.append(tbody);
       table.append(tbl);
+    }
+
+    async function decideTrial(id, decision) {
+      const res = await api("/api/trials/decide", { method: "POST", body: JSON.stringify({ id, decision }) });
+      if (res.status === 200 && res.data && res.data.ok) {
+        toast(decision === "approve" ? "Триал одобрен" : "Триал отклонён", "ok");
+        const refresh = await api("/api/trials");
+        if (refresh.status === 200 && refresh.data && refresh.data.ok) {
+          trials = refresh.data.items || [];
+          draw();
+        }
+      } else if (res.status === 401) {
+        toast("Сессия истекла — войдите снова", "err");
+      } else {
+        toast((res.data && res.data.error) || "Ошибка", "err");
+      }
     }
 
     async function saveTrials() {

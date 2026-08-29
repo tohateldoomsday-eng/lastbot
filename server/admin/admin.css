@@ -224,6 +224,19 @@ textarea { min-height: 74px; resize: vertical; }
   font-size: 16px;
 }
 .row-del:hover { background: rgba(248, 113, 113, 0.18); }
+.row-ok {
+  flex-shrink: 0;
+  width: 34px;
+  height: 38px;
+  margin-right: 6px;
+  border-radius: 9px;
+  border: 1px solid rgba(74, 222, 128, 0.35);
+  background: rgba(74, 222, 128, 0.08);
+  color: #a7f3d0;
+  cursor: pointer;
+  font-size: 16px;
+}
+.row-ok:hover { background: rgba(74, 222, 128, 0.18); }
 .add-btn {
   align-self: flex-start;
   padding: 8px 16px;

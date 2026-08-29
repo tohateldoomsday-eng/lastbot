@@ -1011,7 +1011,12 @@
       if (pr.minBots != null && bots < pr.minBots) return false;
       if (pr.maxBots != null && bots > pr.maxBots) return false;
       const start = pr.startDate ? new Date(pr.startDate).getTime() : 0;
-      const end = pr.endDate ? new Date(pr.endDate + "T23:59:59").getTime() : Infinity;
+      let end = Infinity;
+      if (pr.endDate) {
+        const s = String(pr.endDate);
+        const t = s.includes("T") ? Date.parse(s) : Date.parse(s + "T23:59:59");
+        if (!isNaN(t)) end = t;
+      }
       return now >= start && now <= end;
     });
   }
@@ -1150,7 +1155,10 @@
             .replace("{code}", escapeHtml(data.referralCode || "—"));
           trialSuccessText.innerHTML = text.replace(/\n/g, "<br>");
         } else {
-          trialError.textContent = (data && data.error) || errText;
+          /* серверные тексты чаще всего русские — используем их только если
+             это известный ключ перевода, иначе локализованный общий текст */
+          const serverMsg = data && data.error;
+          trialError.textContent = (serverMsg && tUI(serverMsg)) || errText;
           trialError.hidden = false;
         }
       } catch {
@@ -1197,17 +1205,19 @@
         const data = await res.json();
         if (res.ok && data && data.ok) {
           dashBoard.hidden = false;
+          const mo = tUI("monthsShort") || "мес";
           $("#dashBonusMonths").textContent = data.balance.bonusMonths || 0;
           $("#dashCashback").textContent = "$" + ((data.balance.cashbackCents || 0) / 100).toFixed(2);
           renderDashTable("dashPurchasesBody", "dashPurchasesEmpty", (data.balance.purchases || []).map((p) => [
-            p.date || "", p.bots || 0, (p.months || 0) + " мес", "$" + (p.priceUsd || 0), "+" + (p.cashbackMonths || 0),
+            p.date || "", p.bots || 0, (p.months || 0) + " " + mo, "$" + (p.priceUsd || 0), "+" + (p.cashbackMonths || 0),
           ]));
           renderDashTable("dashReferralsBody", "dashReferralsEmpty", (data.balance.referrals || []).map((r) => [
-            r.date || "", r.buyerAlliance || "", r.bots || 0, (r.months || 0) + " мес", "+" + (r.bonusMonths || 0), "$" + ((r.cashbackCents || 0) / 100).toFixed(2),
+            r.date || "", r.buyerAlliance || "", r.bots || 0, (r.months || 0) + " " + mo, "+" + (r.bonusMonths || 0), "$" + ((r.cashbackCents || 0) / 100).toFixed(2),
           ]));
         } else {
           dashBoard.hidden = true;
-          dashError.textContent = (data && data.error) || notFound;
+          const serverMsg = data && data.error;
+          dashError.textContent = (serverMsg && tUI(serverMsg)) || notFound;
           dashError.hidden = false;
         }
       } catch {
