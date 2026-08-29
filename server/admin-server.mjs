@@ -1010,11 +1010,18 @@ const server = http.createServer(async (req, res) => {
     /* 1.1/1.2/1.5 Цены, сроки и активные акции (публично) */
     if (p === "/api/pricing" && req.method === "GET") {
       const content = loadContent();
+      /* Нормализуем числа: админка может хранить их строками */
+      const botPrices = ((content.pricing && content.pricing.botPrices) || DEFAULTS.pricing.botPrices)
+        .map((t) => (t ? { min: toInt(t.min, 0), max: toInt(t.max, 0), price: toFloat(t.price, 0) } : null))
+        .filter(Boolean);
+      const periods = ((content.pricing && content.pricing.periods) || DEFAULTS.pricing.periods)
+        .map((pr) => (pr ? { months: toInt(pr.months, 0), coef: toFloat(pr.coef, 0), discount: toFloat(pr.discount, 0) } : null))
+        .filter(Boolean);
       json(res, 200, {
         ok: true,
         rate: RUB_RATE,
-        botPrices: (content.pricing && content.pricing.botPrices) || DEFAULTS.pricing.botPrices,
-        periods: (content.pricing && content.pricing.periods) || DEFAULTS.pricing.periods,
+        botPrices,
+        periods,
         promotions: activePromotions(),
         referral: { cashbackPercent: CASHBACK_PERCENT, commissionPercent: COMMISSION_PERCENT },
         trial: { days: TRIAL_DAYS, bots: TRIAL_BOTS },

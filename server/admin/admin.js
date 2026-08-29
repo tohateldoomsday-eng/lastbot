@@ -62,17 +62,17 @@
         {
           path: "pricing.botPrices", label: "Цена за бота (диапазоны)", type: "objects",
           spec: [
-            { key: "min", label: "От ботов", type: "text" },
-            { key: "max", label: "До ботов", type: "text" },
-            { key: "price", label: "Цена за бота, $", type: "text" },
+            { key: "min", label: "От ботов", type: "number" },
+            { key: "max", label: "До ботов", type: "number" },
+            { key: "price", label: "Цена за бота, $", type: "number" },
           ],
         },
         {
           path: "pricing.periods", label: "Сроки подписки", type: "objects",
           spec: [
-            { key: "months", label: "Месяцев", type: "text" },
-            { key: "coef", label: "Коэффициент", type: "text" },
-            { key: "discount", label: "Скидка, %", type: "text" },
+            { key: "months", label: "Месяцев", type: "number" },
+            { key: "coef", label: "Коэффициент", type: "number" },
+            { key: "discount", label: "Скидка, %", type: "number" },
           ],
         },
       ],
@@ -103,8 +103,8 @@
             { key: "reward", label: "Награда", type: "text" },
             { key: "expires", label: "Срок действия", type: "text" },
             { key: "active", label: "Активен (1/0, пусто=да)", type: "text" },
-            { key: "minBots", label: "Мин. ботов (пусто=нет)", type: "text" },
-            { key: "maxBots", label: "Макс. ботов (пусто=нет)", type: "text" },
+            { key: "minBots", label: "Мин. ботов (пусто=нет)", type: "number" },
+            { key: "maxBots", label: "Макс. ботов (пусто=нет)", type: "number" },
           ],
         },
       ],
@@ -501,6 +501,14 @@
           } else if (f.type === "list") {
             const sub = listEditor(path + "[" + i + "]." + f.key, Array.isArray(obj[f.key]) ? obj[f.key] : []);
             fl.append(sub);
+          } else if (f.type === "number") {
+            /* числовые поля храним числами, чтобы калькулятор не падал */
+            const input = document.createElement("input");
+            input.type = "number";
+            input.step = "any";
+            input.value = obj[f.key] == null ? "" : String(obj[f.key]);
+            input.addEventListener("input", () => { obj[f.key] = input.value === "" ? "" : parseFloat(input.value); });
+            fl.append(input);
           } else {
             const input = document.createElement("input");
             input.type = "text";

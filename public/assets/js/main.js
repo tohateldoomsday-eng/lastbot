@@ -992,14 +992,19 @@
   function pricePerBotFor(n) {
     let price = 2.0;
     for (const tier of pricingData.botPrices || []) {
-      if (n >= (tier.min || 0) && n <= (tier.max || Infinity)) { price = tier.price; break; }
+      if (n >= (parseFloat(tier.min) || 0) && n <= (parseFloat(tier.max) || Infinity)) { price = parseFloat(tier.price); break; }
     }
-    return price;
+    return isFinite(price) ? price : 2.0;
   }
 
   function periodFor(months) {
     const list = pricingData.periods || [];
-    return list.find((p) => p.months === months) || { months, coef: months, discount: 0 };
+    const found = list.find((p) => Number(p.months) === months);
+    if (found) {
+      const coef = parseFloat(found.coef);
+      return { months: Number(found.months), coef: isFinite(coef) ? coef : months, discount: parseFloat(found.discount) || 0 };
+    }
+    return { months, coef: months, discount: 0 };
   }
 
   function promoFor(months, bots) {
@@ -1042,10 +1047,10 @@
       promoBanner.hidden = false;
       if (promo.type === "percent") {
         oldPrice = total;
-        total = total * (1 - (promo.value || 0) / 100);
+        total = total * (1 - (parseFloat(promo.value) || 0) / 100);
       } else if (promo.type === "fixed") {
         oldPrice = total;
-        total = Math.max(0, total - (promo.value || 0));
+        total = Math.max(0, total - (parseFloat(promo.value) || 0));
       }
       /* bots-gift: скидка к цене не применяется, только баннер */
     } else if (promoBanner) {
@@ -1061,6 +1066,24 @@
     if (calcSaveBox) calcSaveBox.hidden = save <= 0;
   }
 
+  /* Бейджи скидок у сроков подписки — берём из данных /api/pricing,
+     чтобы правки в админке сразу отражались на сайте */
+  function updatePeriodBadges() {
+    $$("#periodTabs .calc-period").forEach((btn) => {
+      const months = parseInt(btn.dataset.months, 10);
+      const period = periodFor(months);
+      const badge = btn.querySelector(".period-badge");
+      if (!badge) return;
+      const discount = period.discount || 0;
+      if (discount > 0) {
+        badge.textContent = "−" + discount + "%";
+        badge.style.display = "";
+      } else {
+        badge.style.display = "none";
+      }
+    });
+  }
+
   async function loadPricing() {
     try {
       const res = await fetch("/api/pricing", { credentials: "same-origin" });
@@ -1068,6 +1091,7 @@
       const data = await res.json();
       if (data && data.ok) pricingData = { ...PRICING_DEFAULTS, ...data };
       renderPrice();
+      updatePeriodBadges();
     } catch { /* офлайн — работают дефолты */ }
   }
 
@@ -1085,6 +1109,7 @@
     });
     botsRange.addEventListener("input", renderPrice);
     renderPrice();
+    updatePeriodBadges();
     loadPricing();
   }
 
