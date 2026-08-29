@@ -31,7 +31,8 @@ const TRIAL_DAYS = Math.max(1, parseInt(process.env.TRIAL_DAYS || "7", 10));    
 const TRIAL_BOTS = Math.max(1, parseInt(process.env.TRIAL_BOTS || "5", 10));           // ботов в триале
 const COMMISSION_PERCENT = clampPct(process.env.REFERRAL_COMMISSION_PERCENT, 10);      // % денежного кэшбэка рефереру
 const CASHBACK_PERCENT = clampPct(process.env.CASHBACK_PERCENT, 10);                   // % кэшбэка бото-месяцами за любую покупку
-const RUB_RATE = parseFloat(process.env.RUB_RATE || "85");                             // ориентировочный курс $→₽
+const RUB_RATE_RAW = parseFloat(process.env.RUB_RATE || "85"); // ориентировочный курс $→₽
+const RUB_RATE = isFinite(RUB_RATE_RAW) && RUB_RATE_RAW > 0 ? RUB_RATE_RAW : 85;
 
 function clampPct(v, def) {
   const n = parseFloat(v);
@@ -1010,11 +1011,14 @@ const server = http.createServer(async (req, res) => {
     /* 1.1/1.2/1.5 Цены, сроки и активные акции (публично) */
     if (p === "/api/pricing" && req.method === "GET") {
       const content = loadContent();
-      /* Нормализуем числа: админка может хранить их строками */
-      const botPrices = ((content.pricing && content.pricing.botPrices) || DEFAULTS.pricing.botPrices)
+      /* Нормализуем числа: админка может хранить их строками;
+         пустые/кривые массивы заменяем дефолтами */
+      const rawBotPrices = (content.pricing && content.pricing.botPrices) || DEFAULTS.pricing.botPrices;
+      const botPrices = (Array.isArray(rawBotPrices) && rawBotPrices.length ? rawBotPrices : DEFAULTS.pricing.botPrices)
         .map((t) => (t ? { min: toInt(t.min, 0), max: toInt(t.max, 0), price: toFloat(t.price, 0) } : null))
         .filter(Boolean);
-      const periods = ((content.pricing && content.pricing.periods) || DEFAULTS.pricing.periods)
+      const rawPeriods = (content.pricing && content.pricing.periods) || DEFAULTS.pricing.periods;
+      const periods = (Array.isArray(rawPeriods) && rawPeriods.length ? rawPeriods : DEFAULTS.pricing.periods)
         .map((pr) => (pr ? { months: toInt(pr.months, 0), coef: toFloat(pr.coef, 0), discount: toFloat(pr.discount, 0) } : null))
         .filter(Boolean);
       json(res, 200, {

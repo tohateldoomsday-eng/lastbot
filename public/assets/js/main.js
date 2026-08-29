@@ -1012,7 +1012,7 @@
     return (pricingData.promotions || []).filter((pr) => {
       if (!pr || (pr.usageLimit != null && (pr.used || 0) >= pr.usageLimit)) return false;
       const applies = pr.appliesTo || {};
-      if (Array.isArray(applies.periods) && applies.periods.length && !applies.periods.includes(months)) return false;
+      if (Array.isArray(applies.periods) && applies.periods.length && !applies.periods.map(Number).includes(Number(months))) return false;
       if (pr.minBots != null && bots < pr.minBots) return false;
       if (pr.maxBots != null && bots > pr.maxBots) return false;
       const start = pr.startDate ? new Date(pr.startDate).getTime() : 0;
@@ -1046,11 +1046,11 @@
       promoBanner.innerHTML = badge + " " + title + " " + desc;
       promoBanner.hidden = false;
       if (promo.type === "percent") {
-        oldPrice = total;
-        total = total * (1 - (parseFloat(promo.value) || 0) / 100);
+        const v = parseFloat(promo.value) || 0;
+        if (v > 0) { oldPrice = total; total = total * (1 - v / 100); }
       } else if (promo.type === "fixed") {
-        oldPrice = total;
-        total = Math.max(0, total - (parseFloat(promo.value) || 0));
+        const v = parseFloat(promo.value) || 0;
+        if (v > 0) { oldPrice = total; total = Math.max(0, total - v); }
       }
       /* bots-gift: скидка к цене не применяется, только баннер */
     } else if (promoBanner) {
@@ -1066,22 +1066,58 @@
     if (calcSaveBox) calcSaveBox.hidden = save <= 0;
   }
 
-  /* Бейджи скидок у сроков подписки — берём из данных /api/pricing,
-     чтобы правки в админке сразу отражались на сайте */
-  function updatePeriodBadges() {
-    $$("#periodTabs .calc-period").forEach((btn) => {
-      const months = parseInt(btn.dataset.months, 10);
-      const period = periodFor(months);
-      const badge = btn.querySelector(".period-badge");
-      if (!badge) return;
-      const discount = period.discount || 0;
+  /* Кнопки сроков подписки — строим из данных /api/pricing, чтобы
+     правки месяцев/скидок в админке сразу отражались (иначе кнопки
+     захардкожены на 1/3/6/12 и могут врать) */
+  const PERIOD_I18N = { 1: "period1", 3: "period3", 6: "period6", 12: "period12" };
+  function buildPeriodTabs() {
+    const tabsWrap = $("#periodTabs");
+    if (!tabsWrap) return;
+    const periods = (pricingData.periods || []).filter((p) => p && parseInt(p.months, 10) > 0);
+    if (!periods.length) return; // оставляем статичные кнопки из HTML
+    tabsWrap.textContent = "";
+    const moShort = tUI("monthsShort") || "мес";
+    periods.forEach((p) => {
+      const months = parseInt(p.months, 10);
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "calc-period";
+      btn.setAttribute("role", "tab");
+      btn.dataset.months = String(months);
+      const label = document.createElement("span");
+      const key = PERIOD_I18N[months];
+      label.textContent = key ? (tUI(key) || months + " " + moShort) : months + " " + moShort;
+      btn.append(label);
+      const discount = parseFloat(p.discount) || 0;
       if (discount > 0) {
-        badge.textContent = "−" + discount + "%";
-        badge.style.display = "";
-      } else {
-        badge.style.display = "none";
+        const em = document.createElement("em");
+        em.className = "period-badge";
+        em.textContent = "−" + discount + "%";
+        btn.append(em);
       }
+      if (months === currentMonths) {
+        btn.classList.add("is-active");
+        btn.setAttribute("aria-selected", "true");
+      }
+      btn.addEventListener("click", () => {
+        currentMonths = months;
+        $$("#periodTabs .calc-period").forEach((b) => {
+          b.classList.toggle("is-active", b === btn);
+          b.setAttribute("aria-selected", String(b === btn));
+        });
+        renderPrice();
+      });
+      tabsWrap.append(btn);
     });
+    /* если выбранный срок исчез из данных — выбираем первый */
+    if (!periods.some((p) => parseInt(p.months, 10) === currentMonths)) {
+      currentMonths = parseInt(periods[0].months, 10);
+      const first = tabsWrap.querySelector(".calc-period");
+      if (first) {
+        first.classList.add("is-active");
+        first.setAttribute("aria-selected", "true");
+      }
+    }
   }
 
   async function loadPricing() {
@@ -1091,25 +1127,14 @@
       const data = await res.json();
       if (data && data.ok) pricingData = { ...PRICING_DEFAULTS, ...data };
       renderPrice();
-      updatePeriodBadges();
+      buildPeriodTabs();
     } catch { /* офлайн — работают дефолты */ }
   }
 
   if (botsRange) {
-    const periodTabs = $$("#periodTabs .calc-period");
-    periodTabs.forEach((btn) => {
-      btn.addEventListener("click", () => {
-        currentMonths = parseInt(btn.dataset.months, 10);
-        periodTabs.forEach((b) => {
-          b.classList.toggle("is-active", b === btn);
-          b.setAttribute("aria-selected", String(b === btn));
-        });
-        renderPrice();
-      });
-    });
     botsRange.addEventListener("input", renderPrice);
+    buildPeriodTabs();
     renderPrice();
-    updatePeriodBadges();
     loadPricing();
   }
 
