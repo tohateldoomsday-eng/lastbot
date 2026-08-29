@@ -264,6 +264,34 @@ function ensureDataDir() {
 }
 ensureDataDir();
 
+/* Миграция: начисления по реферальному коду зарегистрированного
+   пользователя переносим на его allianceCode (раньше ключи могли
+   разъезжаться — см. referrerBalanceKey). Идемпотентно. */
+function migrateReferralBalances() {
+  try {
+    const users = loadUsers();
+    if (!users.length) return;
+    const balances = readJson(BALANCES_FILE, {});
+    let changed = false;
+    for (const u of users) {
+      if (!u || !u.referralCode || !u.allianceCode || u.referralCode === u.allianceCode) continue;
+      const phantom = balances[u.referralCode];
+      if (!phantom) continue;
+      const main = balances[u.allianceCode] || { name: u.allianceName, bonusMonths: 0, cashbackCents: 0, purchases: [], referrals: [] };
+      main.bonusMonths = (main.bonusMonths || 0) + (phantom.bonusMonths || 0);
+      main.cashbackCents = (main.cashbackCents || 0) + (phantom.cashbackCents || 0);
+      main.purchases = [...(main.purchases || []), ...(phantom.purchases || [])];
+      main.referrals = [...(main.referrals || []), ...(phantom.referrals || [])];
+      main.name = main.name || phantom.name || u.allianceName;
+      balances[u.allianceCode] = main;
+      delete balances[u.referralCode];
+      changed = true;
+    }
+    if (changed) writeJson(BALANCES_FILE, balances);
+  } catch { /* не критично */ }
+}
+migrateReferralBalances();
+
 function loadContent() {
   const raw = readJson(CONTENT_FILE, {});
   let changed = false;
@@ -376,6 +404,20 @@ function findUserById(id) {
 function findUserByAllianceCode(code) {
   const c = String(code || "").toUpperCase();
   return loadUsers().find((u) => u && u.allianceCode === c) || null;
+}
+
+/* Баланс реферера: если код принадлежит зарегистрированному пользователю,
+   начисления идут на его allianceCode — иначе он не увидит их в личном
+   кабинете (/api/profile читает balances[allianceCode]). Для кодов без
+   пользователя (из триалов) ключом остаётся сам код. */
+function referrerBalanceKey(referralCode, refs) {
+  const meta = refs && refs.codes && refs.codes[referralCode];
+  if (!meta) return null;
+  if (meta.user) {
+    const u = findUserById(meta.user);
+    if (u && u.allianceCode) return { key: u.allianceCode, name: u.allianceName || meta.allianceName };
+  }
+  return { key: referralCode, name: meta.allianceName || referralCode };
 }
 
 function genUniqueCode(takenSet) {
@@ -662,33 +704,36 @@ function applyPurchase({ allianceCode, allianceName, botsCount, periodMonths, to
 
   /* 1.3 Реферальный бонус: если указан код реферера */
   let referralAward = null;
-  if (referralCode && refs.codes && refs.codes[referralCode] && referralCode !== allianceCode) {
-    const refMeta = refs.codes[referralCode];
-    const refEntry = balances[referralCode] || {
-      name: refMeta.allianceName || referralCode,
-      bonusMonths: 0,
-      cashbackCents: 0,
-      purchases: [],
-      referrals: [],
-    };
-    const refMonths = botsCount; // «боты альянса Б на 1 месяц бесплатно» = бото-месяцы
-    const refCashbackCents = Math.round(totalPriceUsd * (COMMISSION_PERCENT / 100) * 100);
-    refEntry.bonusMonths += refMonths;
-    refEntry.cashbackCents += refCashbackCents;
-    refEntry.referrals.push({
-      ts: Date.now(),
-      date: new Date().toISOString().slice(0, 10),
-      buyerAlliance: entry.name,
-      bots: botsCount,
-      months: periodMonths,
-      priceUsd: totalPriceUsd,
-      bonusMonths: refMonths,
-      cashbackCents: refCashbackCents,
-    });
-    balances[referralCode] = refEntry;
-    if (!refs.links) refs.links = [];
-    refs.links.push({ referrerCode: referralCode, buyerAlliance: entry.name, buyerCode: allianceCode, ts: Date.now(), bots: botsCount, months: periodMonths, priceUsd: totalPriceUsd });
-    referralAward = { referrerCode: referralCode, bonusMonths: refMonths, cashbackCents: refCashbackCents };
+  if (referralCode && refs.codes && refs.codes[referralCode]) {
+    const refRes = referrerBalanceKey(referralCode, refs);
+    const refKey = refRes ? refRes.key : referralCode;
+    if (refKey !== allianceCode) { /* сам себе — не начисляем */
+      const refEntry = balances[refKey] || {
+        name: (refRes && refRes.name) || referralCode,
+        bonusMonths: 0,
+        cashbackCents: 0,
+        purchases: [],
+        referrals: [],
+      };
+      const refMonths = botsCount; // «боты альянса Б на 1 месяц бесплатно» = бото-месяцы
+      const refCashbackCents = Math.round(totalPriceUsd * (COMMISSION_PERCENT / 100) * 100);
+      refEntry.bonusMonths += refMonths;
+      refEntry.cashbackCents += refCashbackCents;
+      refEntry.referrals.push({
+        ts: Date.now(),
+        date: new Date().toISOString().slice(0, 10),
+        buyerAlliance: entry.name,
+        bots: botsCount,
+        months: periodMonths,
+        priceUsd: totalPriceUsd,
+        bonusMonths: refMonths,
+        cashbackCents: refCashbackCents,
+      });
+      balances[refKey] = refEntry;
+      if (!refs.links) refs.links = [];
+      refs.links.push({ referrerCode: referralCode, buyerAlliance: entry.name, buyerCode: allianceCode, ts: Date.now(), bots: botsCount, months: periodMonths, priceUsd: totalPriceUsd });
+      referralAward = { referrerCode: referralCode, bonusMonths: refMonths, cashbackCents: refCashbackCents };
+    }
   }
 
   balances[allianceCode] = entry;
@@ -881,21 +926,29 @@ const server = http.createServer(async (req, res) => {
       const code = cleanStr(url.searchParams.get("code"), 64).toUpperCase();
       if (!code) { json(res, 400, { ok: false, error: "Укажите код" }); return; }
       const refs = readJson(REFERRALS_FILE, { codes: {}, links: [] });
-      if (!refs.codes || !refs.codes[code]) {
+      const refMeta = refs.codes && refs.codes[code];
+      const balances = readJson(BALANCES_FILE, {});
+      /* Код может быть реферальным (из триала или пользователя) или кодом
+         альянса. У зарегистрированных баланс лежит под allianceCode —
+         резолвим через привязку пользователя. */
+      let bal = balances[code];
+      if (!bal && refMeta && refMeta.user) {
+        const u = findUserById(refMeta.user);
+        if (u && u.allianceCode) bal = balances[u.allianceCode];
+      }
+      if (!refMeta && !bal) {
         json(res, 404, { ok: false, error: "Код альянса не найден" });
         return;
       }
-      const balances = readJson(BALANCES_FILE, {});
-      const bal = balances[code] || { name: refs.codes[code].allianceName || code, bonusMonths: 0, cashbackCents: 0, purchases: [], referrals: [] };
       json(res, 200, {
         ok: true,
         code,
-        alliance: refs.codes[code].allianceName || code,
+        alliance: (bal && bal.name) || (refMeta && refMeta.allianceName) || code,
         balance: {
-          bonusMonths: bal.bonusMonths || 0,
-          cashbackCents: bal.cashbackCents || 0,
-          purchases: bal.purchases || [],
-          referrals: bal.referrals || [],
+          bonusMonths: (bal && bal.bonusMonths) || 0,
+          cashbackCents: (bal && bal.cashbackCents) || 0,
+          purchases: (bal && bal.purchases) || [],
+          referrals: (bal && bal.referrals) || [],
         },
       });
       return;
@@ -960,14 +1013,22 @@ const server = http.createServer(async (req, res) => {
       if (!refs.codes) refs.codes = {};
       if (referralCode && !refs.codes[referralCode]) { json(res, 400, { ok: false, error: "errInvalidCode" }); return; }
 
-      /* Привязка к существующему балансу: по allianceCode или по названию */
+      /* Привязка к существующему балансу: по allianceCode или по названию.
+         Баланс можно привязать только если он ещё никем не занят — иначе
+         любой мог бы зарегистрироваться на чужой код и получить доступ
+         к чужой истории и бонусам. */
       const balances = readJson(BALANCES_FILE, {});
+      const claimedCodes = new Set(users.map((u) => u && u.allianceCode).filter(Boolean));
       let allianceCode = null;
       if (allianceCodeHint && balances[allianceCodeHint]) {
+        if (claimedCodes.has(allianceCodeHint)) {
+          json(res, 409, { ok: false, error: "errAllianceTaken" });
+          return;
+        }
         allianceCode = allianceCodeHint;
       } else {
         const lower = allianceName.toLowerCase();
-        const found = Object.keys(balances).find((k) => balances[k] && String(balances[k].name || "").toLowerCase() === lower);
+        const found = Object.keys(balances).find((k) => !claimedCodes.has(k) && balances[k] && String(balances[k].name || "").toLowerCase() === lower);
         if (found) allianceCode = found;
       }
       if (!allianceCode) {
@@ -1080,20 +1141,18 @@ const server = http.createServer(async (req, res) => {
         json(res, 400, { ok: false, error: "Неверные данные покупки" });
         return;
       }
-      /* Если покупатель зарегистрировался по реферальному коду и это его
-         первая покупка — начисляем бонус рефереру автоматически */
-      let autoReferredUser = null;
-      if (!referralCode) {
-        autoReferredUser = findUserByAllianceCode(allianceCode);
-        if (autoReferredUser && autoReferredUser.referredBy && !autoReferredUser.referredBonusAwarded) {
-          referralCode = autoReferredUser.referredBy;
-        } else {
-          autoReferredUser = null;
-        }
+      /* Реферальный бонус рефереру — строго один раз, за первую покупку.
+         Явный код от админа побеждает, но флаг всё равно поглощается,
+         чтобы авто-бонус не сработал повторно при следующих покупках. */
+      const registeredBuyer = findUserByAllianceCode(allianceCode);
+      let consumeReferralFlag = false;
+      if (registeredBuyer && registeredBuyer.referredBy && !registeredBuyer.referredBonusAwarded) {
+        consumeReferralFlag = true;
+        if (!referralCode) referralCode = registeredBuyer.referredBy;
       }
       const result = applyPurchase({ allianceCode, allianceName, botsCount, periodMonths, totalPriceUsd, referralCode });
-      if (autoReferredUser && result.referralAward) {
-        const users = loadUsers().map((u) => (u.id === autoReferredUser.id ? { ...u, referredBonusAwarded: true } : u));
+      if (consumeReferralFlag) {
+        const users = loadUsers().map((u) => (u.id === registeredBuyer.id ? { ...u, referredBonusAwarded: true } : u));
         saveUsers(users);
       }
       json(res, 200, { ok: true, ...result });
@@ -1132,7 +1191,9 @@ const server = http.createServer(async (req, res) => {
         return;
       }
       const balances = readJson(BALANCES_FILE, {});
-      const refEntry = balances[referralCode] || { name: refs.codes[referralCode].allianceName || referralCode, bonusMonths: 0, cashbackCents: 0, purchases: [], referrals: [] };
+      const refRes = referrerBalanceKey(referralCode, refs);
+      const refKey = refRes ? refRes.key : referralCode;
+      const refEntry = balances[refKey] || { name: (refRes && refRes.name) || refs.codes[referralCode].allianceName || referralCode, bonusMonths: 0, cashbackCents: 0, purchases: [], referrals: [] };
       const refMonths = botsCount;
       const refCashbackCents = Math.round(totalPrice * (COMMISSION_PERCENT / 100) * 100);
       refEntry.bonusMonths += refMonths;
@@ -1147,7 +1208,7 @@ const server = http.createServer(async (req, res) => {
         bonusMonths: refMonths,
         cashbackCents: refCashbackCents,
       });
-      balances[referralCode] = refEntry;
+      balances[refKey] = refEntry;
       refs.links = refs.links || [];
       refs.links.push({ referrerCode: referralCode, buyerAlliance: buyerAlliance || "—", ts: Date.now(), bots: botsCount, months: periodMonths, priceUsd: totalPrice });
       writeJson(BALANCES_FILE, balances);

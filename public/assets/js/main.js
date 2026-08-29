@@ -66,7 +66,7 @@
       });
     }
     if (!isInit || lang !== "ru") {
-      if (typeof loadNews === "function") loadNews();
+      if (newsList) loadNews();
     }
     updateLangUI();
   }
@@ -571,7 +571,11 @@
   const newsList = $("#newsList");
   const newsStatus = $("#newsStatus");
   const newsRefresh = $("#newsRefresh");
-  if (!newsList) return;
+
+  /* Лента новостей есть только на главной. Данные и функции объявлены
+     на уровне IIFE (они нужны applyLanguage при смене языка), а запуск —
+     только при наличии #newsList, чтобы /dashboard и другие страницы,
+     где этого блока нет, продолжали работать. */
 
   /* Основная лента — официальное сообщество DLS ВКонтакте.
      Посты собраны из группы vk.ru/doomsday_last_survivors_ru.
@@ -732,25 +736,27 @@
     }
   }
 
-  const cached = loadCached();
-  lastFetchedAt = cached ? cached.ts : 0;
-  if (cached) {
-    render([...VK_NEWS, ...cached.items], tUI("newsCached"));
-    if (Date.now() - cached.ts >= REFRESH_MS) {
-      loadNews(); // кэш устарел — обновляем
+  if (newsList) {
+    const cached = loadCached();
+    lastFetchedAt = cached ? cached.ts : 0;
+    if (cached) {
+      render([...VK_NEWS, ...cached.items], tUI("newsCached"));
+      if (Date.now() - cached.ts >= REFRESH_MS) {
+        loadNews(); // кэш устарел — обновляем
+      }
+    } else {
+      render(VK_NEWS, tUI("newsLoadingInitial"));
+      loadNews();
     }
-  } else {
-    render(VK_NEWS, tUI("newsLoadingInitial"));
-    loadNews();
-  }
 
-  /* Автообновление раз в 4 часа, пока страница открыта */
-  setInterval(() => loadNews(), REFRESH_MS);
+    /* Автообновление раз в 4 часа, пока страница открыта */
+    setInterval(() => loadNews(), REFRESH_MS);
 
-  /* Вкладка была в фоне, а по возвращении данные устарели — обновляем */
-  document.addEventListener("visibilitychange", () => {
-    if (!document.hidden && Date.now() - lastFetchedAt > REFRESH_MS) loadNews();
-  });
+    /* Вкладка была в фоне, а по возвращении данные устарели — обновляем */
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden && Date.now() - lastFetchedAt > REFRESH_MS) loadNews();
+    });
+  } /* конец блока новостей */
 
   /* ---------- Вкладки: новости / промокоды ---------- */
   const tabNewsBtn = $("#tabNewsBtn");

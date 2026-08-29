@@ -289,6 +289,7 @@
     const password = $("#regPassword").value;
     const allianceName = $("#regAlliance").value.trim();
     const referralCode = $("#regReferral").value.trim();
+    const allianceCode = ($("#regAllianceCode") && $("#regAllianceCode").value.trim()) || "";
 
     if (!email || password.length < 8 || allianceName.length < 2) {
       registerError.textContent = !email ? (tUI("errInvalidEmail") || "Введите корректный email") : (password.length < 8 ? (tUI("errWeakPassword") || "Пароль должен быть не короче 8 символов") : (tUI("errAllianceName") || "Укажите название альянса"));
@@ -298,7 +299,7 @@
 
     const res = await api("/api/register", {
       method: "POST",
-      body: JSON.stringify({ email, password, allianceName, referralCode: referralCode || null }),
+      body: JSON.stringify({ email, password, allianceName, referralCode: referralCode || null, allianceCode: allianceCode || null }),
     });
     if (res.status === 200 && res.data && res.data.ok) {
       /* Автовход после регистрации */
@@ -306,7 +307,7 @@
       if (loginRes.status === 200 && loginRes.data && loginRes.data.ok) {
         renderDashboard({ email, allianceName: loginRes.data.allianceName, allianceCode: loginRes.data.allianceCode, referralCode: loginRes.data.referralCode, balance: loginRes.data.balance });
       } else {
-        registerSuccess.textContent = tUI("applyBonusSuccess") || "Аккаунт создан — войдите с email и паролем.";
+        registerSuccess.textContent = tUI("registerCreated") || "Аккаунт создан — войдите с email и паролем.";
         registerSuccess.hidden = false;
       }
     } else {

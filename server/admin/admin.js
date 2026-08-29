@@ -727,7 +727,7 @@
         banner: pr.banner || "",
         type: pr.type || "percent",
         value: parseFloat(pr.value) || 0,
-        appliesTo: { periods: String(pr.periods || "").split(",").map((x) => parseInt(x.trim(), 10)).filter((x) => !isNaN(x)) },
+        appliesTo: { ...(pr.appliesTo || {}), periods: String(pr.periods || "").split(",").map((x) => parseInt(x.trim(), 10)).filter((x) => !isNaN(x)) },
         minBots: pr.minBots === "" || pr.minBots == null ? null : parseInt(pr.minBots, 10),
         maxBots: pr.maxBots === "" || pr.maxBots == null ? null : parseInt(pr.maxBots, 10),
         startDate: pr.startDate || null,
@@ -745,7 +745,12 @@
     (async () => {
       const res = await api("/api/promotions?all=1");
       if (res.status === 200 && res.data && res.data.ok) {
-        promotions = res.data.promotions || [];
+        promotions = (res.data.promotions || []).map((pr) => ({
+          ...pr,
+          /* сервер хранит сроки в appliesTo.periods; для поля редактора
+             держим строку вида «1,3,6» в pr.periods */
+          periods: pr.appliesTo && Array.isArray(pr.appliesTo.periods) ? pr.appliesTo.periods.join(",") : "",
+        }));
         draw();
       } else if (res.status === 401) {
         toast("Сессия истекла — войдите снова", "err");
