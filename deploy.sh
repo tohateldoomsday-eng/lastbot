@@ -16,6 +16,16 @@ if [ ! -f .env ]; then
   exit 1
 fi
 
+# Совместимость: docker compose (v2, плагин) или docker-compose (v1)
+if docker compose version >/dev/null 2>&1; then
+  DC="docker compose"
+elif command -v docker-compose >/dev/null 2>&1; then
+  DC="docker-compose"
+else
+  echo "Ошибка: не найден ни 'docker compose', ни 'docker-compose'." >&2
+  exit 1
+fi
+
 echo "==> Обновляем код (git pull)..."
 git pull --ff-only
 
@@ -26,20 +36,20 @@ if [ -d data ]; then
 fi
 
 echo "==> Сборка образа..."
-docker-compose build
+$DC build
 
 echo "==> Перезапуск контейнера..."
-docker-compose up -d
+$DC up -d
 
 sleep 2
 echo "==> Статус:"
-docker-compose ps
+$DC ps
 
 echo "==> Проверки:"
 if curl -fsS http://localhost:8080/healthz >/dev/null 2>&1; then
   echo "  healthz: ok"
 else
-  echo "  healthz: НЕ ОТВЕЧАЕТ — смотрите: docker-compose logs web"
+  echo "  healthz: НЕ ОТВЕЧАЕТ — смотрите: $DC logs web"
 fi
 if curl -fsS "http://localhost:8080/api/news?lang=ru" >/dev/null 2>&1; then
   echo "  /api/news: ok"
