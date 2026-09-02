@@ -959,14 +959,20 @@
   /* ---------- Калькулятор цены (ползунок + сроки + акции) ---------- */
   const PRICING_DEFAULTS = {
     botPrices: [
+      /* Маржинальные блоки добавочных ботов (пакеты 10 = $20, 20 = $35, 30 = $55).
+         Каждый блок оплачивается за ботов в своём диапазоне:
+         1–10 по $2.00 → 10 ботов = $20;
+         11–20 по $1.50 → 20 ботов = $20 + $15 = $35;
+         21–30 по $2.00 → 30 ботов = $35 + $20 = $55.
+         Промежуточные количества считаются плавно (15 ботов = $27.50) — без «просадок». */
       { min: 1, max: 10, price: 2.0 },
-      { min: 11, max: 20, price: 1.8 },
-      { min: 21, max: 30, price: 1.5 },
+      { min: 11, max: 20, price: 1.5 },
+      { min: 21, max: 30, price: 2.0 },
     ],
     periods: [
       { months: 1, discount: 0 },
-      { months: 3, discount: 17 },
-      { months: 6, discount: 17 },
+      { months: 3, discount: 10 },
+      { months: 6, discount: 15 },
       { months: 12, discount: 25 },
     ],
     rate: RUB_RATE,
@@ -989,12 +995,22 @@
   function fmtUsd(n) { return "$" + n.toFixed(2); }
   function fmtRub(n) { return "≈ " + n.toLocaleString("ru-RU") + " ₽"; }
 
-  function pricePerBotFor(n) {
-    let price = 2.0;
-    for (const tier of pricingData.botPrices || []) {
-      if (n >= (parseFloat(tier.min) || 0) && n <= (parseFloat(tier.max) || Infinity)) { price = parseFloat(tier.price); break; }
+  /* Месячная цена пакета БЕЗ скидки за срок — маржинальные блоки:
+     каждый блок ботов (диапазон botPrices) оплачивается по своей ставке.
+     Даёт точные пакеты 10 = $20 / 20 = $35 / 30 = $55 без «просадок» цены. */
+  function priceMonthlyFor(n) {
+    let total = 0;
+    for (const block of pricingData.botPrices || []) {
+      const lo = parseInt(block && block.min, 10);
+      const hi = parseInt(block && block.max, 10);
+      const rate = parseFloat(block && block.price);
+      if (!isFinite(lo) || !isFinite(hi) || hi < lo) continue;
+      const cnt = Math.max(0, Math.min(n, hi) - lo + 1); /* ботов из этого блока в пакете */
+      if (cnt <= 0) continue;
+      /* отрицательная/кривая ставка блока → 0 (не ниже бесплатного) */
+      total += cnt * (isFinite(rate) ? Math.max(0, rate) : 0);
     }
-    return isFinite(price) ? price : 2.0;
+    return total;
   }
 
   function periodFor(months) {
@@ -1031,13 +1047,14 @@
   function renderPrice() {
     if (!botsRange) return;
     const bots = parseInt(botsRange.value, 10);
-    const perBot = pricePerBotFor(bots);
+    const monthly = priceMonthlyFor(bots);        /* цена пакета, 1 мес, без скидки срока */
+    const perBot = bots > 0 ? monthly / bots : 0; /* средняя цена за бота (для отображения) */
     const period = periodFor(currentMonths);
-    /* Цена со скидками за объём и срок (без акции) */
-    const prePromo = perBot * bots * period.coef;
-    /* База: тот же пакет помесячно по базовому тарифу $2/бот —
-       экономия растёт с количеством ботов и сроком */
-    const base = 2.0 * bots * currentMonths;
+    /* Цена со скидкой за срок (без акции) */
+    const prePromo = monthly * period.coef;
+    /* База: тот же пакет помесячно БЕЗ скидки за срок —
+       «Вы экономите» = только скидка за срок */
+    const base = monthly * currentMonths;
     let total = prePromo;
     let oldPrice = null;
     let promoOff = 0;
@@ -1053,7 +1070,8 @@
       promoBanner.innerHTML = badge + " " + title + " " + desc;
       promoBanner.hidden = false;
       if (promo.type === "percent") {
-        const v = parseFloat(promo.value) || 0;
+        /* скидка не может быть больше 100% — иначе цена уходит в минус */
+        const v = Math.min(100, Math.max(0, parseFloat(promo.value) || 0));
         if (v > 0) { oldPrice = prePromo; total = prePromo * (1 - v / 100); promoOff = prePromo - total; }
       } else if (promo.type === "fixed") {
         const v = parseFloat(promo.value) || 0;
@@ -1068,7 +1086,7 @@
       calcUsd.innerHTML = (oldPrice != null ? '<s class="calc-old">' + fmtUsd(oldPrice) + "</s> " : "") + fmtUsd(total);
     }
     if (calcRub) calcRub.textContent = fmtRub(Math.round((total * pricingData.rate) / 100) * 100);
-    /* Экономия: объём + срок, БЕЗ акции (акция — отдельной строкой),
+    /* Экономия — только скидка за срок, БЕЗ акции (акция — отдельной строкой),
        чтобы сумма росла со сроком и не путалась */
     const save = Math.max(0, base - prePromo);
     if (calcSaveVal) calcSaveVal.textContent = fmtUsd(save);

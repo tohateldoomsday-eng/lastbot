@@ -54,17 +54,18 @@
       ],
     },
     {
-      id: "pricing", label: "Калькулятор цен", desc: "Цены за бота по диапазонам и сроки подписки",
+      id: "pricing", label: "Калькулятор цен", desc: "Маржинальные блоки ботов (пакеты 10/20/30) и сроки подписки",
       fields: [
         { path: "pricing.heading", label: "Заголовок блока", type: "text" },
         { path: "pricing.sub", label: "Подзаголовок", type: "text" },
         { path: "pricing.note", label: "Примечание об оплате", type: "textarea" },
         {
-          path: "pricing.botPrices", label: "Цена за бота (диапазоны)", type: "objects",
+          path: "pricing.botPrices", label: "Блоки добавочных ботов", type: "objects",
+          desc: "Каждый блок оплачивается за ботов в своём диапазоне. Пример: 1–10 по $2.00 + 11–20 по $1.50 → 20 ботов = $35; 21–30 по $2.00 → 30 ботов = $55.",
           spec: [
             { key: "min", label: "От ботов", type: "number" },
             { key: "max", label: "До ботов", type: "number" },
-            { key: "price", label: "Цена за бота, $", type: "number" },
+            { key: "price", label: "Ставка блока, $ за бота", type: "number" },
           ],
         },
         {

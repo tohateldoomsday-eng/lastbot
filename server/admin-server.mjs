@@ -78,17 +78,19 @@ const DEFAULTS = {
   pricing: {
     heading: "Собери свой пакет ботов",
     sub: "Двигай ползунок, выбирай срок — цена считается мгновенно, в долларах и рублях.",
-    /* Прогрессивные цены за бота: диапазоны количества ботов */
+    /* Маржинальные блоки добавочных ботов: пакеты 10 ботов = $20, 20 = $35,
+       30 = $55. 1–10 по $2.00, 11–20 по $1.50, 21–30 по $2.00; промежуточные
+       количества считаются плавно, без «просадок» цены */
     botPrices: [
       { min: 1, max: 10, price: 2.0 },
-      { min: 11, max: 20, price: 1.8 },
-      { min: 21, max: 30, price: 1.5 },
+      { min: 11, max: 20, price: 1.5 },
+      { min: 21, max: 30, price: 2.0 },
     ],
     /* Сроки подписки: коэффициент к месячной цене и % скидки */
     periods: [
       { months: 1, coef: 1.0, discount: 0 },
-      { months: 3, coef: 2.5, discount: 17 },
-      { months: 6, coef: 5.0, discount: 17 },
+      { months: 3, coef: 2.7, discount: 10 },
+      { months: 6, coef: 5.1, discount: 15 },
       { months: 12, coef: 9.0, discount: 25 },
     ],
     note: "Оплата и условия — с менеджером в Telegram (@lastbotdls). При каждой покупке начисляется 10% кэшбэка бонусными бото-месяцами. Цены в рублях ориентировочные: курс ≈85 ₽/$.",
@@ -1015,7 +1017,7 @@ const server = http.createServer(async (req, res) => {
          пустые/кривые массивы заменяем дефолтами */
       const rawBotPrices = (content.pricing && content.pricing.botPrices) || DEFAULTS.pricing.botPrices;
       const botPrices = (Array.isArray(rawBotPrices) && rawBotPrices.length ? rawBotPrices : DEFAULTS.pricing.botPrices)
-        .map((t) => (t ? { min: toInt(t.min, 0), max: toInt(t.max, 0), price: toFloat(t.price, 0) } : null))
+        .map((t) => (t ? { min: toInt(t.min, 0), max: toInt(t.max, 0), price: Math.max(0, toFloat(t.price, 0)) } : null))
         .filter(Boolean);
       const rawPeriods = (content.pricing && content.pricing.periods) || DEFAULTS.pricing.periods;
       const periods = (Array.isArray(rawPeriods) && rawPeriods.length ? rawPeriods : DEFAULTS.pricing.periods)
